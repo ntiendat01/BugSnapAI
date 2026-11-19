@@ -19,6 +19,7 @@
 | ADR-14 | AI trả `Field{value,source,confidence,needs_confirmation}` | Tách quan sát/suy đoán, ép tester xác nhận | Schema phức tạp hơn |
 | ADR-15 | Thêm **Phase 0 spike** | Giảm rủi ro nền tảng sớm | Chậm hiển thị tiến độ UI |
 | ADR-16 | Trần rolling buffer / pre-roll = **30 s** (tùy chọn 15/30, mặc định 30; bỏ 60 s) | Chủ dự án giới hạn độ dài video giữ trước Mark Bug | Clip xuất ra = pre-roll + post-roll nên có thể dài hơn 30 s (tối đa 30+10 = 40 s) |
+| ADR-17 | Khai báo trực tiếp `kotlinx-coroutines` 1.11.0 (core/android/test) | Đã có trong stack `05`; cần dependency trực tiếp cho qualifier dispatcher (`T-002`) | — |
 
 ## B. Kết quả spike (điền sau `T-010`)
 Mã spike nằm trên nhánh `spike/capture` (commit T-010). **Chưa chạy trên OnePlus Ace 5 — không điền kết quả giả.** Quy trình từng bước, lệnh logcat và cách lấy clip: `docs/SPIKE_TESTING.md`.
