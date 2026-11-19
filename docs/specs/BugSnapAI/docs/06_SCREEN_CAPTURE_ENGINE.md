@@ -40,7 +40,7 @@ sequenceDiagram
 | Codec | `video/avc` (H.264) | Tương thích rộng, mux MP4 ổn định |
 | Cạnh dài | 1280 px (giữ tỉ lệ, làm tròn bội 16) | Giảm tải nhiệt/pin; đủ đọc UI |
 | FPS | 30 (hoặc 24 nếu nóng máy) | Màn hình tĩnh tạo ít frame (VFR) |
-| Bitrate | 4 Mbps (CBR/VBR theo hỗ trợ) | 30 s ≈ 15 MB, 60 s ≈ 30 MB |
+| Bitrate | 4 Mbps (CBR/VBR theo hỗ trợ) | 30 s ≈ 15 MB (dữ liệu pre-roll đã mã hóa; clip còn cộng post-roll) |
 | Khoảng I-frame | 1 s | Điểm cắt clip chính xác ≤ 1 s |
 | Màn hình tĩnh | `repeat-previous-frame-after` ≈ 1 s hoặc `PARAMETER_KEY_REQUEST_SYNC_FRAME` định kỳ | Đảm bảo luôn có keyframe để cắt clip **[cần xác minh trên Ace 5]** |
 | Âm thanh | Không (MVP) | Quay audio nội bộ bị hạn chế; ghi chú giọng nói tách riêng (V2) |

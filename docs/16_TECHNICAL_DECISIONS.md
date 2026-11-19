@@ -18,6 +18,7 @@
 | ADR-13 | Clip dừng tại ranh giới generation khi xoay màn hình | MP4 không đổi kích thước giữa chừng | Clip có thể ngắn hơn |
 | ADR-14 | AI trả `Field{value,source,confidence,needs_confirmation}` | Tách quan sát/suy đoán, ép tester xác nhận | Schema phức tạp hơn |
 | ADR-15 | Thêm **Phase 0 spike** | Giảm rủi ro nền tảng sớm | Chậm hiển thị tiến độ UI |
+| ADR-16 | Trần rolling buffer / pre-roll = **30 s** (tùy chọn 15/30, mặc định 30; bỏ 60 s) | Chủ dự án giới hạn độ dài video giữ trước Mark Bug | Clip xuất ra = pre-roll + post-roll nên có thể dài hơn 30 s (tối đa 30+10 = 40 s) |
 
 ## B. Kết quả spike (điền sau `T-010`)
 | # | Câu hỏi (`06` §9) | Kết quả | Ngày/Build/OS |
@@ -30,7 +31,7 @@
 | 1 | Trạng thái phiên: `01`, `03`, `05`, `09`, `11` | Khớp 7 trạng thái; `pauseReason` thêm ở `05`/`09`/`11` (mở rộng so với đề bài, ghi nhận) |
 | 2 | ImageReader nhắc trong đề bài vs thiết kế | Loại bỏ có chủ đích (ADR-03); `02`, `06`, `16` nhất quán |
 | 3 | Post-roll: `03` (0/3/5/10), `07` (mặc định 5), `08` dùng `+postRoll` | Khớp |
-| 4 | RAM: `03` NFR-4 (≤80 MB) vs `07` (≈33 MB + export song song) | Khớp, còn phải đo thực |
+| 4 | RAM: `03` NFR-4 (≤80 MB) vs `07` (≈18 MB ở 30 s + tối đa 3 snapshot đang mux) | Khớp, còn phải đo thực |
 | 5 | Endpoint/field AI: `08` payload/schema vs `10` | Khớp (`schema_version 1.0`) |
 | 6 | `report.status` ở `09` vs luồng ở `04`/`11` | Khớp: DRAFT, AI_QUEUED, AI_GENERATED, NEEDS_REVIEW, COMPLETED |
 | 7 | Quyền: `05` §9 vs `04` onboarding vs `12` | Khớp; `RECORD_AUDIO` chỉ V2 |
@@ -47,7 +48,7 @@
 |---|---|
 | **Khả thi kỹ thuật** | Cao cho lõi (overlay + MediaProjection + ring buffer, cùng thiết bị, không root). Điểm chưa chắc: hành vi OxygenOS và chi tiết overlay/clip |
 | **Rủi ro chính** | (1) OxygenOS kill nền/ngừng projection khi khóa màn hình; (2) RAM/nhiệt khi quay dài; (3) bong bóng lọt vào clip; (4) chất lượng/chi phí AI; (5) riêng tư dữ liệu AUT |
-| **MVP đề xuất** | Phase 0+1+2: phiên, bong bóng + dự phòng, ring buffer 15/30/60 s, Mark Bug (clip+ảnh+ghi chú), history, library, AI vision ≤6 ảnh duyệt tay, xuất Markdown/clipboard/Share |
+| **MVP đề xuất** | Phase 0+1+2: phiên, bong bóng + dự phòng, ring buffer 15/30 s (mặc định 30, trần 30 s), Mark Bug (clip+ảnh+ghi chú), history, library, AI vision ≤6 ảnh duyệt tay, xuất Markdown/clipboard/Share |
 | **Độ tin cậy kiến trúc** | Trung bình–cao cho thiết kế; **chưa kiểm chứng trên thiết bị** ⇒ chưa nên coi là chắc chắn |
 | **Câu hỏi còn mở (cần chủ dự án)** | Nhà cung cấp/model AI và chính sách giữ dữ liệu của họ? Backend chạy ở đâu? Có cần phân phối Play không? Có AUT nào chứa dữ liệu nhạy cảm đặc biệt? Chấp nhận bong bóng xuất hiện trong clip? |
 | **Task đầu tiên** | `T-001` scaffold, rồi **`T-010` spike** (ưu tiên cao nhất) |
@@ -56,4 +57,4 @@
 Đã kiểm tra: mọi luồng (`04`), kiến trúc (`05`), capture (`06`) và test (`13`) đều chạy **trên cùng một thiết bị Android, không root, không máy thứ hai, không ADB lúc chạy thật**. ADB chỉ được nhắc cho giai đoạn phát triển/spike. ✅
 
 ## F. Thay đổi so với đề bài (cần chủ dự án biết)
-1. Bỏ ImageReader ở MVP. 2. Thêm Phase 0. 3. Thêm `pauseReason` và `CLIP_LOST/FAILED`. 4. Thêm chế độ dự phòng Mark Bug khi không có overlay. 5. Không dùng AccessibilityService/MCP trước V3.
+1. Bỏ ImageReader ở MVP. 2. Thêm Phase 0. 3. Thêm `pauseReason` và `CLIP_LOST/FAILED`. 4. Thêm chế độ dự phòng Mark Bug khi không có overlay. 5. Không dùng AccessibilityService/MCP trước V3. 6. Trần rolling buffer / pre-roll = 30 s (bỏ tùy chọn 60 s; mặc định 30 s); clip = pre-roll + post-roll nên có thể > 30 s.

@@ -4,7 +4,7 @@
 Manual tester phải: tái hiện bug, nhớ các bước, quay màn hình *sau khi* bug đã xảy ra (thường là quá muộn), rồi viết report thủ công. Chuyển qua lại giữa app ghi chú và AUT làm gián đoạn luồng test.
 
 ## 2. Giải pháp
-BugSnap AI chạy nền cùng thiết bị, hiện **bong bóng nổi**. Khi thấy bug, tester bấm **Mark Bug**; app giữ lại **N giây trước đó** (rolling buffer) + ảnh chụp + metadata. Cuối phiên, AI soạn **bản nháp** report; tester duyệt rồi mới lưu/xuất.
+BugSnap AI chạy nền cùng thiết bị, hiện **bong bóng nổi**. App quay liên tục vào rolling buffer trong RAM (15 hoặc 30 giây, mặc định 30) và **không ghi đĩa** cho đến khi có Mark Bug. App **không tự nhận diện bug**: tester thấy lỗi thì bấm **Mark Bug**; khi đó app lưu clip (pre-roll ≤ 30 s + post-roll — trần 30 s chỉ áp dụng cho buffer/pre-roll, nên clip có thể dài hơn 30 s) + ảnh chụp + metadata. Cuối phiên, AI soạn **bản nháp** report; tester duyệt rồi mới lưu/xuất. AI không tự phát hiện và không tự gửi bug.
 
 ## 3. Người dùng
 Manual QA/QC, mobile tester, QA engineer. Thiết bị chính: OnePlus Ace 5 / OxygenOS 16 (Android 16).

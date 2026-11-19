@@ -1,6 +1,6 @@
 # BugSnap AI
 
-Trợ lý kiểm thử Android chạy **cùng thiết bị** với ứng dụng đang test (AUT): bong bóng nổi để đánh dấu bug, bộ đệm quay màn hình cuộn (rolling buffer) giữ lại N giây trước khi bug xảy ra, và AI soạn bản nháp bug report để tester duyệt.
+Trợ lý kiểm thử Android chạy **cùng thiết bị** với ứng dụng đang test (AUT): bong bóng nổi để đánh dấu bug, bộ đệm quay màn hình cuộn (rolling buffer) giữ lại tối đa 30 giây trước khi bug xảy ra (15 hoặc 30 s, mặc định 30), và AI soạn bản nháp bug report để tester duyệt. App không tự nhận diện bug và không ghi đĩa cho đến khi tester bấm Mark Bug.
 
 > Trạng thái: **chỉ có tài liệu đặc tả, chưa có code ứng dụng.** Gói này dành cho coding agent triển khai sau.
 

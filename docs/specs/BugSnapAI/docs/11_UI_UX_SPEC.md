@@ -41,7 +41,7 @@ Quy ước trạng thái: **Empty / Loading / Error / Permission** có cho từn
 
 ### 3.2 New Test Session
 - Mục đích: cấu hình phiên.
-- Thành phần: tên phiên, chọn AUT (danh sách app có launcher), build/version (tự điền từ PackageManager, sửa được), độ dài buffer (15/30/60 s), post-roll, ghi chú bối cảnh/hành vi mong đợi (tùy chọn, dùng cho AI), công tắc "Hiện bong bóng".
+- Thành phần: tên phiên, chọn AUT (danh sách app có launcher), build/version (tự điền từ PackageManager, sửa được), độ dài buffer (15/30 s, mặc định 30 s), post-roll, ghi chú bối cảnh/hành vi mong đợi (tùy chọn, dùng cho AI), công tắc "Hiện bong bóng".
 - Hành động: **Bắt đầu** → luồng quyền → hộp thoại hệ thống MediaProjection → Active Session.
 - Lỗi: AUT không chọn được ⇒ cho nhập tay tên. Permission: nếu thiếu overlay, hiện giải thích + chuyển sang chế độ dự phòng.
 
@@ -78,7 +78,7 @@ Danh sách phiên (tên, ngày, số marker, trạng thái). Lọc theo trạng 
 Ô tìm kiếm, chip lọc (Nháp/Hoàn tất, severity, phiên, ngày), danh sách thẻ (tiêu đề, trạng thái, ảnh thu nhỏ). Hành động: mở/sửa/xóa/xuất. Empty/Loading/Error như trên.
 
 ### 3.9 Settings
-Buffer & post-roll mặc định, chất lượng quay (Chuẩn/Tiết kiệm), tự xóa clip sau N ngày, URL backend + token, trần ngân sách AI, trạng thái quyền + hướng dẫn pin OxygenOS, "Mark nhanh", xóa toàn bộ dữ liệu, phiên bản/giấy phép.
+Buffer (15/30 s, mặc định 30) & post-roll mặc định, chất lượng quay (Chuẩn/Tiết kiệm), tự xóa clip sau N ngày, URL backend + token, trần ngân sách AI, trạng thái quyền + hướng dẫn pin OxygenOS, "Mark nhanh", xóa toàn bộ dữ liệu, phiên bản/giấy phép.
 
 ## 4. Chỉ báo ghi hình
 Notification liên tục (biểu tượng + chữ "Đang ghi phiên: <tên>"), chip hệ thống Android, bong bóng viền cyan khi ghi/vàng khi pause. Không có chế độ ghi "ẩn".

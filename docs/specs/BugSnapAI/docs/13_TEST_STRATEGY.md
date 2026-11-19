@@ -29,7 +29,7 @@
 |---|---|---|
 | Xử lý quyền (từ chối overlay/thông báo/projection) | UI test + thủ công | Chế độ dự phòng hoạt động; không crash |
 | Chụp màn hình/clip | Thủ công (spike) + instrumentation | Clip phát được, dài đúng ±1 s |
-| Rolling buffer | Unit + thủ công | Clip bắt đầu ở keyframe; độ dài ≈ cấu hình |
+| Rolling buffer | Unit + thủ công | Clip bắt đầu ở keyframe; pre-roll ≈ cấu hình buffer (15/30 s); độ dài clip ≈ pre-roll + post-roll |
 | Vòng đời (đưa app ra nền, màn hình tắt, khóa) | Thủ công | Phiên chuyển trạng thái đúng, không treo |
 | Xoay màn hình ×20 | Thủ công + instrumentation | Không rò rỉ, clip chỉ gồm generation hiện tại |
 | Chạy nền 60 phút | Thủ công | Service sống hoặc phục hồi đúng cách; ghi thời điểm bị kill |

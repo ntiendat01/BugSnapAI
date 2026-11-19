@@ -136,7 +136,7 @@ flowchart LR
 - **Test:** Compose test + thủ công.
 
 ### T-023 Settings (MVP phần ghi hình)
-- **Mục tiêu:** buffer/post-roll/retention/chất lượng. **Tiên quyết:** T-021.
+- **Mục tiêu:** buffer (15/30 s, mặc định 30)/post-roll/retention/chất lượng. **Tiên quyết:** T-021.
 - **File:** `data/settings/*`, `ui/settings/*`. **Acceptance:** cài đặt áp dụng cho phiên mới.
 - **Test:** unit DataStore.
 

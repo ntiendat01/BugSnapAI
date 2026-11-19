@@ -8,7 +8,7 @@ sequenceDiagram
     participant Svc as CaptureService (FGS)
     participant B as Bubble (Overlay)
     participant AUT as Ứng dụng đang test
-    T->>App: Tạo phiên (AUT, buffer 30s)
+    T->>App: Tạo phiên (AUT, buffer 30s mặc định)
     App->>T: Xin quyền overlay / thông báo
     App->>T: Hộp thoại MediaProjection (đồng ý)
     App->>Svc: startForegroundService(+kết quả đồng ý)

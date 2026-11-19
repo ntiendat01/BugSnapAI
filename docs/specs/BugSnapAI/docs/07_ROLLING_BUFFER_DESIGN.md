@@ -24,7 +24,9 @@ ClipSnapshot  { samples: List<EncodedSample> (tham chiếu bất biến), genera
 - Dùng `ReentrantLock` hoặc một coroutine đơn luồng (Channel) sở hữu buffer; **snapshot phải đồng bộ** với việc thêm mẫu.
 
 ## 4. Mark Bug: pre-roll + post-roll
-- **Pre-roll** = `bufferSec` (15/30/60). **Post-roll** mặc định 5 s (0/3/5/10). Lý do: nhiều bug lộ rõ *sau* khi thao tác; 5 s ít tốn RAM.
+- **Pre-roll** = `bufferSec` (15/30, mặc định 30). Trần rolling buffer / pre-roll là **30 s** (không còn tùy chọn 60 s). **Post-roll** mặc định 5 s (0/3/5/10). Lý do post-roll: nhiều bug lộ rõ *sau* khi thao tác; 5 s ít tốn RAM.
+- **Độ dài clip xuất ra** = pre-roll thực tế + post-roll. Trần 30 s **chỉ áp dụng cho buffer/pre-roll**, không gồm post-roll. Ví dụ: mặc định 30 + 5 = 35 s; tối đa 30 + 10 = 40 s.
+- Không ghi clip/ảnh xuống đĩa cho đến khi Mark Bug; mẫu cũ trong buffer bị ghi đè trong RAM.
 - Thuật toán:
   1. T0: ghi marker `PENDING` vào DB (id mới, `tMarkUs`).
   2. Lấy `ClipSnapshot` ngay: tập mẫu từ keyframe ≤ `tMark − preRoll`.
@@ -44,10 +46,10 @@ ClipSnapshot  { samples: List<EncodedSample> (tham chiếu bất biến), genera
 `RAM ≈ bitrate × (buffer + margin + postRoll) / 8`
 | Cấu hình | Ước lượng |
 |---|---|
-| 4 Mbps, 30 s + 1 + 5 | ≈ 18 MB |
-| 4 Mbps, 60 s + 1 + 5 | ≈ 33 MB |
-| Trường hợp xấu: 3 snapshot đang chờ mux, đã bị cắt khỏi buffer | + ≤ 3 × 20 MB |
-Trần thiết kế (NFR-4) ≤ 80 MB. Nếu vượt: giảm bitrate xuống 3 Mbps hoặc giới hạn số export song song còn 2. Dùng `ByteArray` (heap) hoặc `ByteBuffer.allocateDirect` pool; cần đo trong spike.
+| 4 Mbps, 15 s + 1 + 5 | ≈ 11 MB |
+| 4 Mbps, 30 s + 1 + 5 (tối đa) | ≈ 18 MB |
+| Trường hợp xấu: 3 snapshot đang chờ mux (mỗi clip tối đa ≈ 30+10 s ≈ 20 MB), đã bị cắt khỏi buffer | + ≤ 3 × 20 MB |
+Trần thiết kế (NFR-4) ≤ 80 MB vẫn đủ cho cấu hình tối đa 30 s + 3 export song song; còn phải đo thực. Nếu vượt: giảm bitrate xuống 3 Mbps hoặc giới hạn số export song song còn 2. Dùng `ByteArray` (heap) hoặc `ByteBuffer.allocateDirect` pool; cần đo trong spike.
 
 ## 7. Phục hồi và độ bền
 | Sự cố | Hành vi |

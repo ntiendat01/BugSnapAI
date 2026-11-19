@@ -2,7 +2,7 @@
 
 ## 1. Công nghệ
 - **Room (SQLite)** cho dữ liệu quan hệ + **FTS4** cho tìm kiếm thư viện bug.
-- **DataStore (Preferences)** cho cài đặt (độ dài buffer, post-roll, URL backend, trần ngân sách).
+- **DataStore (Preferences)** cho cài đặt (độ dài buffer 15/30 s, mặc định 30; post-roll, URL backend, trần ngân sách).
 - **File store riêng của app** (`filesDir`/`getExternalFilesDir`) cho clip/ảnh; **không** dùng MediaStore công khai mặc định (giữ riêng tư). Chia sẻ qua `FileProvider`.
 - Token backend: lưu bằng Android Keystore (EncryptedFile/ `Tink`, ghi ADR khi chọn), không để trong DataStore thô.
 
@@ -93,6 +93,7 @@ erDiagram
 ## 4. Ràng buộc và chỉ mục
 - Khóa ngoại bật `ON DELETE CASCADE` (xóa phiên xóa marker/evidence/report DB) — **file xóa riêng** bởi `EvidenceStore.deleteSession()` trong cùng use case; thứ tự: xóa file → xóa DB; nếu lỗi file, giữ bản ghi `PENDING_DELETE` để thử lại.
 - Chỉ mục: `bug_marker(sessionId, indexInSession)` unique; `evidence(markerId)`; `bug_report(status, updatedAt)`; `bug_report(sessionId)`.
+- `bufferSec` chỉ nhận 15 hoặc 30; mặc định 30. Không lưu/không cho chọn 60.
 - `relPath` lưu **đường dẫn tương đối** so với gốc file store (an toàn khi di chuyển/backup).
 - Thời gian lưu epoch millis UTC.
 

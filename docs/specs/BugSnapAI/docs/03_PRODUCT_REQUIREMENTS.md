@@ -6,7 +6,7 @@ Ký hiệu: **M** = MVP, **V2**, **V3**. FR = chức năng, NFR = phi chức nă
 ### Phiên kiểm thử
 | ID | Yêu cầu | Phase |
 |---|---|---|
-| FR-S1 | Tạo phiên: tên, AUT (chọn từ danh sách app có launcher), build/version ghi chú, độ dài buffer (15/30/60 s), post-roll (0/3/5/10 s) | M |
+| FR-S1 | Tạo phiên: tên, AUT (chọn từ danh sách app có launcher), build/version ghi chú, độ dài buffer (15/30 s, mặc định 30 s), post-roll (0/3/5/10 s) | M |
 | FR-S2 | Bắt đầu: xin quyền overlay, thông báo, MediaProjection; chạy `CaptureService` | M |
 | FR-S3 | Pause/Resume/Stop; hiển thị rõ trạng thái đang ghi | M |
 | FR-S4 | Xem lại phiên: danh sách marker, bằng chứng | M |
@@ -23,10 +23,11 @@ Ký hiệu: **M** = MVP, **V2**, **V3**. FR = chức năng, NFR = phi chức nă
 | FR-B5 | Tự mờ khi không dùng | M |
 
 ### Ghi hình và marker
+Phát hiện bug là thủ công: tester bấm Mark Bug. Không có nhận diện tự động; AI chỉ soạn bản nháp sau khi đã có marker.
 | ID | Yêu cầu | Phase |
 |---|---|---|
-| FR-C1 | Quay màn hình liên tục vào ring buffer RAM | M |
-| FR-C2 | Mark Bug lưu clip (pre-roll + post-roll), ảnh chụp, timestamp, metadata thiết bị/AUT | M |
+| FR-C1 | Quay màn hình liên tục vào ring buffer RAM; không ghi clip/ảnh xuống đĩa cho đến khi Mark Bug | M |
+| FR-C2 | Mark Bug lưu clip (pre-roll ≤ 30 s + post-roll; trần 30 s chỉ cho pre-roll nên clip có thể > 30 s), ảnh chụp, timestamp, metadata thiết bị/AUT | M |
 | FR-C3 | Nhiều marker không ghi đè nhau; marker liên tiếp nhanh được xếp hàng | M |
 | FR-C4 | Ghi chú văn bản gắn marker (trước hoặc sau) | M |
 | FR-C5 | Ghi chú giọng nói | V2 |
@@ -57,7 +58,7 @@ Ký hiệu: **M** = MVP, **V2**, **V3**. FR = chức năng, NFR = phi chức nă
 | NFR-1 | Không root, không ADB, một thiết bị | Kiểm tra thủ công trên Ace 5 |
 | NFR-2 | Độ trễ Mark Bug → phản hồi UI | < 150 ms |
 | NFR-3 | Clip + ảnh sẵn sàng | ≤ post-roll + 5 s |
-| NFR-4 | RAM cho buffer | ≤ 80 MB ở cấu hình 60 s mặc định (xem `07`) |
+| NFR-4 | RAM cho buffer | ≤ 80 MB ở cấu hình tối đa 30 s, gồm buffer sống và tối đa 3 snapshot đang mux (xem `07`) |
 | NFR-5 | Pin | Mức tiêu hao khi quay 1 giờ được đo và công bố; mục tiêu ≤ thấp hơn quay màn hình hệ thống cùng độ phân giải (đo so sánh) |
 | NFR-6 | Nhiệt | Không giảm FPS nhiều khi quay 60 phút (đo) |
 | NFR-7 | Độ tin cậy | Không mất marker đã lưu DB khi app bị kill |
