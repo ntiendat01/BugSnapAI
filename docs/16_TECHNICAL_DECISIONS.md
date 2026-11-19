@@ -14,7 +14,7 @@
 | ADR-09 | **Không AccessibilityService, không MCP** ở MVP/V2 | Rủi ro riêng tư/Play; MCP không thay API capture | Không có metadata cấu trúc UI |
 | ADR-10 | Room + FTS4; file store riêng của app; DataStore cho cài đặt | Chuẩn, đủ dùng | — |
 | ADR-11 | Phân phối APK riêng ở MVP | Tránh rào cản chính sách Play | Cập nhật thủ công |
-| ADR-12 | `minSdk 29`, `target/compileSdk 36` | FGS type mediaProjection; thiết bị chính Android 16 | Bỏ máy rất cũ |
+| ADR-12 | `minSdk 29`, `targetSdk 36`, `compileSdk 37` | FGS type mediaProjection; thiết bị chính Android 16. T-001: Compose 1.12+ (BOM 2026.09.00) bắt buộc compileSdk 37 | `targetSdk` vẫn 36; bỏ máy dưới API 29 |
 | ADR-13 | Clip dừng tại ranh giới generation khi xoay màn hình | MP4 không đổi kích thước giữa chừng | Clip có thể ngắn hơn |
 | ADR-14 | AI trả `Field{value,source,confidence,needs_confirmation}` | Tách quan sát/suy đoán, ép tester xác nhận | Schema phức tạp hơn |
 | ADR-15 | Thêm **Phase 0 spike** | Giảm rủi ro nền tảng sớm | Chậm hiển thị tiến độ UI |

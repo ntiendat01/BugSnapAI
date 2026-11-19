@@ -4,7 +4,7 @@
 - **Một module `:app` cho MVP**, tổ chức theo package-by-feature và ranh giới lớp rõ ràng. Tách module Gradle chỉ khi: build > 2 phút do kích thước, hoặc có nhóm làm song song, hoặc cần tái dùng `capture` ở app khác. Khi tách, thứ tự: `:core-capture` → `:data` → `:feature-*`.
 - MVVM + UDF (UiState/Event), Clean Architecture **nhẹ**: có `domain` (use case, model, interface repo) chỉ cho phần có logic thật (session, marker, report); CRUD đơn giản dùng thẳng repository.
 - Stack: Kotlin, Compose + Material 3, Coroutines/Flow, Room, DataStore, Hilt, WorkManager (chỉ cho hàng đợi gửi AI), Retrofit/OkHttp hoặc Ktor client (chọn một, ghi ADR), kotlinx.serialization.
-- `minSdk 29` (MediaProjection cần FGS type từ Android 10), `targetSdk/compileSdk 36` (xác minh khi khởi tạo). Thiết bị chính: Android 16.
+- `minSdk 29` (MediaProjection cần FGS type từ Android 10), `targetSdk 36`, `compileSdk 37`. Thiết bị chính: Android 16. `compileSdk` được nâng lên 37 khi khởi tạo T-001 vì Compose 1.12+ (BOM 2026.09.00) yêu cầu compileSdk 37; `targetSdk` giữ 36 (xem ADR-12).
 
 ## 2. Kiến trúc hệ thống
 ```mermaid

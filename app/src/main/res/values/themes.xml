@@ -1,0 +1,9 @@
+<?xml version="1.0" encoding="utf-8"?>
+<resources>
+    <style name="Theme.BugSnapAI" parent="android:Theme.Material.NoActionBar">
+        <item name="android:statusBarColor">@color/bugsnap_background</item>
+        <item name="android:navigationBarColor">@color/bugsnap_background</item>
+        <item name="android:windowBackground">@color/bugsnap_background</item>
+        <item name="android:windowLightStatusBar">false</item>
+    </style>
+</resources>
