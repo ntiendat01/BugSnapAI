@@ -21,6 +21,7 @@ erDiagram
       string autVersion
       string state
       string pauseReason
+      string failureReason
       int bufferSec
       int postRollSec
       long createdAt
@@ -84,7 +85,9 @@ erDiagram
 ```
 
 ## 3. Giá trị enum
-- `session.state`: IDLE, PREPARING, RECORDING, PAUSED, STOPPING, COMPLETED, FAILED. `pauseReason`: USER, PROJECTION_LOST, LOW_STORAGE, SCREEN_LOCKED, PROCESS_DIED (dùng cho FAILED).
+- `session.state`: IDLE, PREPARING, RECORDING, PAUSED, STOPPING, COMPLETED, FAILED.
+- `pauseReason` (chỉ khi `PAUSED`): USER, PROJECTION_LOST, LOW_STORAGE, SCREEN_LOCKED.
+- `failureReason` (chỉ khi `FAILED`): PROCESS_DIED, ENGINE, FLUSH, ENCODER, STORAGE. (`PROCESS_DIED` không thuộc `pauseReason`; `05` là nguồn sự thật.)
 - `marker.clipStatus`: PENDING, READY, CLIP_FAILED, CLIP_LOST.
 - `evidence.type`: CLIP, SCREENSHOT_MARK, SCREENSHOT_PRE, KEYFRAME, VOICE, ANNOTATED (V2).
 - `report.status`: DRAFT (soạn tay), AI_QUEUED, AI_GENERATED (chờ duyệt), NEEDS_REVIEW (còn trường cần xác nhận), COMPLETED.

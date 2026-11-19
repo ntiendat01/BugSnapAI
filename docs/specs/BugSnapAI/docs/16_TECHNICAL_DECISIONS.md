@@ -41,7 +41,7 @@ Ghi chú build hiện tại: `versionName 0.1.0-t010`, pre-roll tối đa 30 s, 
 ## C. Rà soát nhất quán giữa các tài liệu
 | # | Vấn đề đã kiểm | Kết quả |
 |---|---|---|
-| 1 | Trạng thái phiên: `01`, `03`, `05`, `09`, `11` | Khớp 7 trạng thái; `pauseReason` thêm ở `05`/`09`/`11` (mở rộng so với đề bài, ghi nhận) |
+| 1 | Trạng thái phiên: `01`, `03`, `05`, `09`, `11` | Khớp 7 trạng thái. T-003: tách `failureReason` khỏi `pauseReason`; `PROCESS_DIED` là `failureReason` (theo `05`), không nhét vào `pauseReason` như bản `09` trước đây |
 | 2 | ImageReader nhắc trong đề bài vs thiết kế | Loại bỏ có chủ đích (ADR-03); `02`, `06`, `16` nhất quán |
 | 3 | Post-roll: `03` (0/3/5/10), `07` (mặc định 5), `08` dùng `+postRoll` | Khớp |
 | 4 | RAM: `03` NFR-4 (≤80 MB) vs `07` (≈18 MB ở 30 s + tối đa 3 snapshot đang mux) | Khớp, còn phải đo thực |

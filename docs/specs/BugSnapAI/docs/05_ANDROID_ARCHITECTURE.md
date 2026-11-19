@@ -70,9 +70,10 @@ stateDiagram-v2
     FAILED --> [*]
 ```
 - `PAUSED` có `pauseReason`: `USER`, `PROJECTION_LOST`, `LOW_STORAGE`, `SCREEN_LOCKED`.
-- Mark Bug chỉ hợp lệ ở `RECORDING`. Mọi chuyển không có trong bảng ⇒ `IllegalTransition` (log + bỏ qua, không crash).
+- `FAILED` có `failureReason`: `PROCESS_DIED`, `ENGINE` (từ `PREPARING`), `FLUSH` (từ `STOPPING`), `ENCODER` / `STORAGE` (từ `RECORDING`). `PROCESS_DIED` **không** phải `pauseReason`.
+- Mark Bug chỉ hợp lệ ở `RECORDING` (không đổi state). Mọi chuyển không có trong bảng ⇒ `IllegalTransition` (trả về, log + bỏ qua, không crash).
 - `FAILED` vẫn giữ marker/bằng chứng đã có; người dùng xem lại được.
-- Khởi động app: phiên ở `RECORDING/PAUSED/PREPARING/STOPPING` trong DB mà không có service sống ⇒ chuyển `FAILED(reason=PROCESS_DIED)`, marker `PENDING` ⇒ `CLIP_LOST`.
+- Khởi động app: phiên ở `RECORDING/PAUSED/PREPARING/STOPPING` trong DB mà không có service sống ⇒ chuyển `FAILED(failureReason=PROCESS_DIED)`, marker `PENDING` ⇒ `CLIP_LOST`.
 
 ## 6. Luồng dữ liệu capture → bằng chứng
 ```mermaid
