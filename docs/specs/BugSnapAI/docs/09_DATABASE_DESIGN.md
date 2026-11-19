@@ -28,6 +28,7 @@ erDiagram
       long startedAt
       long endedAt
       string deviceJson
+      boolean pendingDelete
     }
     BUG_MARKER {
       string id PK
@@ -94,7 +95,7 @@ erDiagram
 - `provenanceJson`: bản đồ `field → {source, confidence, needsConfirmation}` để UI tô nổi trường cần xác nhận. COMPLETED chỉ khi mọi `needsConfirmation` đã được tester xác nhận hoặc sửa.
 
 ## 4. Ràng buộc và chỉ mục
-- Khóa ngoại bật `ON DELETE CASCADE` (xóa phiên xóa marker/evidence/report DB) — **file xóa riêng** bởi `EvidenceStore.deleteSession()` trong cùng use case; thứ tự: xóa file → xóa DB; nếu lỗi file, giữ bản ghi `PENDING_DELETE` để thử lại.
+- Khóa ngoại bật `ON DELETE CASCADE` (xóa phiên xóa marker/evidence/report DB) — **file xóa riêng** bởi `EvidenceStore.deleteSession()` trong cùng use case; thứ tự: xóa file → xóa DB; nếu xóa file lỗi, đặt `session.pendingDelete = true` (cờ boolean, **không** phải `session.state`) và giữ bản ghi (kèm state `COMPLETED`/`FAILED`) để thử lại.
 - Chỉ mục: `bug_marker(sessionId, indexInSession)` unique; `evidence(markerId)`; `bug_report(status, updatedAt)`; `bug_report(sessionId)`.
 - `bufferSec` chỉ nhận 15 hoặc 30; mặc định 30. Không lưu/không cho chọn 60.
 - `relPath` lưu **đường dẫn tương đối** so với gốc file store (an toàn khi di chuyển/backup).

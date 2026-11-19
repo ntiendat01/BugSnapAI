@@ -1,0 +1,281 @@
+{
+  "formatVersion": 1,
+  "database": {
+    "version": 1,
+    "identityHash": "1ba16ebccb10d8f4c57d3ec60a4ffbcf",
+    "entities": [
+      {
+        "tableName": "session",
+        "createSql": "CREATE TABLE IF NOT EXISTS `${TABLE_NAME}` (`id` TEXT NOT NULL, `name` TEXT NOT NULL, `autPackage` TEXT, `autLabel` TEXT, `autVersion` TEXT, `state` TEXT NOT NULL, `pauseReason` TEXT, `failureReason` TEXT, `bufferSec` INTEGER NOT NULL DEFAULT 30, `postRollSec` INTEGER NOT NULL DEFAULT 5, `createdAt` INTEGER NOT NULL, `startedAt` INTEGER, `endedAt` INTEGER, `deviceJson` TEXT, `pendingDelete` INTEGER NOT NULL DEFAULT 0, PRIMARY KEY(`id`))",
+        "fields": [
+          {
+            "fieldPath": "id",
+            "columnName": "id",
+            "affinity": "TEXT",
+            "notNull": true
+          },
+          {
+            "fieldPath": "name",
+            "columnName": "name",
+            "affinity": "TEXT",
+            "notNull": true
+          },
+          {
+            "fieldPath": "autPackage",
+            "columnName": "autPackage",
+            "affinity": "TEXT"
+          },
+          {
+            "fieldPath": "autLabel",
+            "columnName": "autLabel",
+            "affinity": "TEXT"
+          },
+          {
+            "fieldPath": "autVersion",
+            "columnName": "autVersion",
+            "affinity": "TEXT"
+          },
+          {
+            "fieldPath": "state",
+            "columnName": "state",
+            "affinity": "TEXT",
+            "notNull": true
+          },
+          {
+            "fieldPath": "pauseReason",
+            "columnName": "pauseReason",
+            "affinity": "TEXT"
+          },
+          {
+            "fieldPath": "failureReason",
+            "columnName": "failureReason",
+            "affinity": "TEXT"
+          },
+          {
+            "fieldPath": "bufferSec",
+            "columnName": "bufferSec",
+            "affinity": "INTEGER",
+            "notNull": true,
+            "defaultValue": "30"
+          },
+          {
+            "fieldPath": "postRollSec",
+            "columnName": "postRollSec",
+            "affinity": "INTEGER",
+            "notNull": true,
+            "defaultValue": "5"
+          },
+          {
+            "fieldPath": "createdAt",
+            "columnName": "createdAt",
+            "affinity": "INTEGER",
+            "notNull": true
+          },
+          {
+            "fieldPath": "startedAt",
+            "columnName": "startedAt",
+            "affinity": "INTEGER"
+          },
+          {
+            "fieldPath": "endedAt",
+            "columnName": "endedAt",
+            "affinity": "INTEGER"
+          },
+          {
+            "fieldPath": "deviceJson",
+            "columnName": "deviceJson",
+            "affinity": "TEXT"
+          },
+          {
+            "fieldPath": "pendingDelete",
+            "columnName": "pendingDelete",
+            "affinity": "INTEGER",
+            "notNull": true,
+            "defaultValue": "0"
+          }
+        ],
+        "primaryKey": {
+          "autoGenerate": false,
+          "columnNames": [
+            "id"
+          ]
+        }
+      },
+      {
+        "tableName": "bug_marker",
+        "createSql": "CREATE TABLE IF NOT EXISTS `${TABLE_NAME}` (`id` TEXT NOT NULL, `sessionId` TEXT NOT NULL, `indexInSession` INTEGER NOT NULL, `tMarkPtsUs` INTEGER NOT NULL, `wallClockMs` INTEGER NOT NULL, `sessionOffsetMs` INTEGER NOT NULL, `note` TEXT, `clipStatus` TEXT NOT NULL, `actualPreRollMs` INTEGER, `actualPostRollMs` INTEGER, PRIMARY KEY(`id`), FOREIGN KEY(`sessionId`) REFERENCES `session`(`id`) ON UPDATE NO ACTION ON DELETE CASCADE )",
+        "fields": [
+          {
+            "fieldPath": "id",
+            "columnName": "id",
+            "affinity": "TEXT",
+            "notNull": true
+          },
+          {
+            "fieldPath": "sessionId",
+            "columnName": "sessionId",
+            "affinity": "TEXT",
+            "notNull": true
+          },
+          {
+            "fieldPath": "indexInSession",
+            "columnName": "indexInSession",
+            "affinity": "INTEGER",
+            "notNull": true
+          },
+          {
+            "fieldPath": "tMarkPtsUs",
+            "columnName": "tMarkPtsUs",
+            "affinity": "INTEGER",
+            "notNull": true
+          },
+          {
+            "fieldPath": "wallClockMs",
+            "columnName": "wallClockMs",
+            "affinity": "INTEGER",
+            "notNull": true
+          },
+          {
+            "fieldPath": "sessionOffsetMs",
+            "columnName": "sessionOffsetMs",
+            "affinity": "INTEGER",
+            "notNull": true
+          },
+          {
+            "fieldPath": "note",
+            "columnName": "note",
+            "affinity": "TEXT"
+          },
+          {
+            "fieldPath": "clipStatus",
+            "columnName": "clipStatus",
+            "affinity": "TEXT",
+            "notNull": true
+          },
+          {
+            "fieldPath": "actualPreRollMs",
+            "columnName": "actualPreRollMs",
+            "affinity": "INTEGER"
+          },
+          {
+            "fieldPath": "actualPostRollMs",
+            "columnName": "actualPostRollMs",
+            "affinity": "INTEGER"
+          }
+        ],
+        "primaryKey": {
+          "autoGenerate": false,
+          "columnNames": [
+            "id"
+          ]
+        },
+        "indices": [
+          {
+            "name": "index_bug_marker_sessionId_indexInSession",
+            "unique": true,
+            "columnNames": [
+              "sessionId",
+              "indexInSession"
+            ],
+            "orders": [],
+            "createSql": "CREATE UNIQUE INDEX IF NOT EXISTS `index_bug_marker_sessionId_indexInSession` ON `${TABLE_NAME}` (`sessionId`, `indexInSession`)"
+          }
+        ],
+        "foreignKeys": [
+          {
+            "table": "session",
+            "onDelete": "CASCADE",
+            "onUpdate": "NO ACTION",
+            "columns": [
+              "sessionId"
+            ],
+            "referencedColumns": [
+              "id"
+            ]
+          }
+        ]
+      },
+      {
+        "tableName": "evidence",
+        "createSql": "CREATE TABLE IF NOT EXISTS `${TABLE_NAME}` (`id` TEXT NOT NULL, `markerId` TEXT NOT NULL, `type` TEXT NOT NULL, `relPath` TEXT NOT NULL, `sizeBytes` INTEGER NOT NULL, `offsetMs` INTEGER, `approvedForAi` INTEGER NOT NULL, PRIMARY KEY(`id`), FOREIGN KEY(`markerId`) REFERENCES `bug_marker`(`id`) ON UPDATE NO ACTION ON DELETE CASCADE )",
+        "fields": [
+          {
+            "fieldPath": "id",
+            "columnName": "id",
+            "affinity": "TEXT",
+            "notNull": true
+          },
+          {
+            "fieldPath": "markerId",
+            "columnName": "markerId",
+            "affinity": "TEXT",
+            "notNull": true
+          },
+          {
+            "fieldPath": "type",
+            "columnName": "type",
+            "affinity": "TEXT",
+            "notNull": true
+          },
+          {
+            "fieldPath": "relPath",
+            "columnName": "relPath",
+            "affinity": "TEXT",
+            "notNull": true
+          },
+          {
+            "fieldPath": "sizeBytes",
+            "columnName": "sizeBytes",
+            "affinity": "INTEGER",
+            "notNull": true
+          },
+          {
+            "fieldPath": "offsetMs",
+            "columnName": "offsetMs",
+            "affinity": "INTEGER"
+          },
+          {
+            "fieldPath": "approvedForAi",
+            "columnName": "approvedForAi",
+            "affinity": "INTEGER",
+            "notNull": true
+          }
+        ],
+        "primaryKey": {
+          "autoGenerate": false,
+          "columnNames": [
+            "id"
+          ]
+        },
+        "indices": [
+          {
+            "name": "index_evidence_markerId",
+            "unique": false,
+            "columnNames": [
+              "markerId"
+            ],
+            "orders": [],
+            "createSql": "CREATE INDEX IF NOT EXISTS `index_evidence_markerId` ON `${TABLE_NAME}` (`markerId`)"
+          }
+        ],
+        "foreignKeys": [
+          {
+            "table": "bug_marker",
+            "onDelete": "CASCADE",
+            "onUpdate": "NO ACTION",
+            "columns": [
+              "markerId"
+            ],
+            "referencedColumns": [
+              "id"
+            ]
+          }
+        ]
+      }
+    ],
+    "setupQueries": [
+      "CREATE TABLE IF NOT EXISTS room_master_table (id INTEGER PRIMARY KEY,identity_hash TEXT)",
+      "INSERT OR REPLACE INTO room_master_table (id,identity_hash) VALUES(42, '1ba16ebccb10d8f4c57d3ec60a4ffbcf')"
+    ]
+  }
+}
