@@ -2,7 +2,7 @@
 
 Trợ lý kiểm thử Android chạy cùng thiết bị với ứng dụng đang test. Bộ tài liệu đặc tả nằm trong `docs/`.
 
-Trạng thái hiện tại: **T-001 — khung project** (theme, Hilt, điều hướng rỗng, màn Home trống). Chưa có luồng quay màn hình.
+Trạng thái hiện tại trên nhánh `spike/capture`: **T-010 — spike MediaProjection + ring buffer**. Nhánh `dev` vẫn là T-001. Kết quả V1–V9 phải điền trên OnePlus Ace 5 (xem `docs/SPIKE_TESTING.md`); chưa có số liệu máy thật.
 
 ## Yêu cầu môi trường
 
@@ -44,3 +44,12 @@ Mở project bằng Android Studio (AGP 9.5 / Gradle 9.6). Thiết bị chính �
 | minSdk / targetSdk / compileSdk | 29 / 36 / 37 |
 
 `compileSdk` là 37 (không phải 36 như bản đầu của `docs/05`) vì Compose 1.12+ trong BOM 2026.09.00 yêu cầu compileSdk 37. `targetSdk` vẫn 36, đúng thiết bị chính Android 16. Xem ADR-12 trong `docs/16_TECHNICAL_DECISIONS.md`.
+
+## T-010 Spike (nhánh `spike/capture`)
+
+```bash
+./gradlew installDebug
+adb logcat -s BugSnapSpike:V
+```
+
+Màn hình mở lên là app thử quay: Bắt đầu quay → đồng ý MediaProjection → Mark Bug để lưu clip (pre-roll ≤ 30 s + post-roll 5 s) và 2 ảnh. Clip nằm trong bộ nhớ riêng của app (`files/spike/`). Hướng dẫn V1–V9: `docs/SPIKE_TESTING.md`.

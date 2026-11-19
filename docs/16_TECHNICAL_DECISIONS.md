@@ -21,9 +21,21 @@
 | ADR-16 | Trần rolling buffer / pre-roll = **30 s** (tùy chọn 15/30, mặc định 30; bỏ 60 s) | Chủ dự án giới hạn độ dài video giữ trước Mark Bug | Clip xuất ra = pre-roll + post-roll nên có thể dài hơn 30 s (tối đa 30+10 = 40 s) |
 
 ## B. Kết quả spike (điền sau `T-010`)
+Mã spike nằm trên nhánh `spike/capture` (commit T-010). **Chưa chạy trên OnePlus Ace 5 — không điền kết quả giả.** Quy trình từng bước, lệnh logcat và cách lấy clip: `docs/SPIKE_TESTING.md`.
+
+Ghi chú build hiện tại: `versionName 0.1.0-t010`, pre-roll tối đa 30 s, post-roll 5 s, encode cạnh dài 1280 / 30 fps / 4 Mbps / I-frame 1 s.
+
 | # | Câu hỏi (`06` §9) | Kết quả | Ngày/Build/OS |
 |---|---|---|---|
-| V1–V9 | | _chưa kiểm chứng_ | |
+| V1 | Token dùng lại có lỗi `SecurityException` ở Android 16? | _chưa kiểm chứng_ | |
+| V2 | Chọn "một app" thì overlay có vào video không? AUT ra nền thì sao? | _chưa kiểm chứng_ | |
+| V3 | Quay toàn màn hình: bong bóng/huy hiệu có hiện trong clip? | _chưa kiểm chứng_ | |
+| V4 | Màn hình tĩnh có sinh keyframe định kỳ với tham số đã chọn? | _chưa kiểm chứng_ | |
+| V5 | Khóa màn hình có gọi `onStop`? Mở khóa có tự phục hồi? | _chưa kiểm chứng_ | |
+| V6 | OxygenOS có kill service sau bao lâu khi tắt màn hình/pin yếu? | _chưa kiểm chứng_ | |
+| V7 | Android 15+ ẩn nội dung thông báo trong clip? | _chưa kiểm chứng_ | |
+| V8 | Độ trễ Mark → clip xong; RAM thực tế | _chưa kiểm chứng_ | |
+| V9 | Xoay màn hình: `setSurface` + encoder mới hoạt động không rò rỉ? | _chưa kiểm chứng_ | |
 
 ## C. Rà soát nhất quán giữa các tài liệu
 | # | Vấn đề đã kiểm | Kết quả |

@@ -2,4 +2,5 @@
 <resources>
     <color name="bugsnap_background">#FF0B1220</color>
     <color name="bugsnap_primary">#FF22D3EE</color>
+    <color name="bugsnap_on_primary_overlay">#FF04222A</color>
 </resources>

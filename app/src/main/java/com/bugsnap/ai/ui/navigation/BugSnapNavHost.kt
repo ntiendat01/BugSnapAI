@@ -6,6 +6,7 @@ import androidx.navigation.NavHostController
 import androidx.navigation.compose.NavHost
 import androidx.navigation.compose.composable
 import androidx.navigation.compose.rememberNavController
+import com.bugsnap.ai.spike.SpikeCaptureScreen
 import com.bugsnap.ai.ui.home.HomeScreen
 
 @Composable
@@ -15,9 +16,12 @@ fun BugSnapNavHost(
 ) {
     NavHost(
         navController = navController,
-        startDestination = Route.Home.path,
+        startDestination = Route.Spike.path,
         modifier = modifier,
     ) {
+        composable(route = Route.Spike.path) {
+            SpikeCaptureScreen()
+        }
         composable(route = Route.Home.path) {
             HomeScreen()
         }

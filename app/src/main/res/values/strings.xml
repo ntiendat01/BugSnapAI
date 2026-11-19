@@ -3,4 +3,34 @@
     <string name="app_name">BugSnap AI</string>
     <string name="home_title">BugSnap AI</string>
     <string name="home_empty">Chưa có phiên kiểm thử.</string>
+
+    <string name="spike_title">T-010 Spike Capture</string>
+    <string name="spike_banner">BUGSNAP SPIKE</string>
+    <string name="spike_intro">App thử MediaProjection + ring buffer (tối đa 30 s pre-roll, post-roll 5 s). Kết quả V1–V9 phải điền trên OnePlus Ace 5; xem docs/SPIKE_TESTING.md. Không có gì được ghi đĩa cho đến khi bấm Mark.</string>
+    <string name="spike_start">Bắt đầu quay</string>
+    <string name="spike_stop">Dừng</string>
+    <string name="spike_mark">Mark Bug</string>
+    <string name="spike_overlay_request">Cấp quyền overlay (cần cho V2/V3)</string>
+    <string name="spike_overlay_granted">Quyền overlay đã cấp (huy hiệu BS khi đang ghi)</string>
+    <string name="spike_reuse_token">V1: thử VirtualDisplay lần hai</string>
+    <string name="spike_post_test_notification">V7: gửi thông báo thử</string>
+    <string name="spike_reuse_result">Kết quả V1: %1$s</string>
+    <string name="spike_status_idle">Idle</string>
+    <string name="spike_status_starting">Starting</string>
+    <string name="spike_status_recording">Đang ghi</string>
+    <string name="spike_status_projection_lost">Mất MediaProjection — cần cấp lại</string>
+    <string name="spike_status_stopped">Đã dừng</string>
+    <string name="spike_metrics">Trạng thái: %1$s\nĐã ghi: %2$d s\nBuffer: %3$d s, %4$d KB\nJava heap: %5$d KB\nFPS encode: %6$.1f\nKhoảng I-frame gần nhất: %7$d ms\nSố keyframe: %8$d\nGeneration: %9$d (%10$d x %11$d)\nĐang xuất: %12$d\nOverlay: %13$s\nNhiệt / pin: %14$s / %15$s\nLatency Mark gần nhất: %16$d ms</string>
+    <string name="spike_clips_header">Clip đã lưu</string>
+    <string name="spike_clips_empty">Chưa có clip. Bấm Mark sau khi buffer đã chạy vài giây.</string>
+    <string name="spike_clip_item">%1$s — %2$d ms (pre %3$d + post %4$d), latency %5$d ms</string>
+    <string name="spike_logcat_hint">Logcat: adb logcat -s BugSnapSpike:V</string>
+    <string name="spike_channel_capture">Ghi màn hình (spike)</string>
+    <string name="spike_channel_test">Thông báo thử (V7)</string>
+    <string name="spike_notification_recording">Đang ghi phiên spike</string>
+    <string name="spike_notification_idle">Spike Capture</string>
+    <string name="spike_notification_text">Mark Bug hoặc Dừng từ đây.</string>
+    <string name="spike_test_notification_title">Thông báo thử V7</string>
+    <string name="spike_overlay_label">BS</string>
+    <string name="spike_thermal_severe">Nhiệt độ máy cao (SEVERE). Nên Pause.</string>
 </resources>
