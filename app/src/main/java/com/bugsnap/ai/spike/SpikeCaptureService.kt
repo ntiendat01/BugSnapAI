@@ -72,8 +72,7 @@ class SpikeCaptureService : Service() {
             onResult = { result -> scope.launch { exportFeedback.complete(result); finishWhenReady() } },
             onStarted = { id -> session.markerStage(id, MarkerStage.Exporting) },
         )
-        overlay = SpikeOverlay(this, onMark = { mark() }, onStop = { stopCapture("user") },
-            onQuickMark = { enabled -> session.update { it.copy(quickMark = enabled) } })
+        overlay = SpikeOverlay(this, onMark = { mark() }, onStop = { stopCapture("user") })
         scope.launch {
             session.state.collect { state ->
                 overlay.render(state)

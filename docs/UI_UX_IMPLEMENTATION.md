@@ -1,5 +1,7 @@
 # Triển khai UI/UX phản hồi quay và Mark Bug
 
+Bản thu gọn 0.1.2 và ảnh mới được theo dõi tại [tài liệu 18](18_COMPACT_OVERLAY_UX.md).
+
 Ngày 21/11/2026. Bản APK `0.1.1-t010`, `versionCode 2`, nhánh `dev`. Phạm vi là hoàn thiện trải nghiệm thử T-010 theo [thiết kế 17](17_CAPTURE_FEEDBACK_UX.md).
 
 ## Hành vi đã triển khai

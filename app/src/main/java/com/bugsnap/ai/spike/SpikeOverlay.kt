@@ -2,227 +2,252 @@ package com.bugsnap.ai.spike
 
 import android.content.Context
 import android.content.Intent
-import android.graphics.Color
+import android.content.res.ColorStateList
 import android.graphics.PixelFormat
 import android.graphics.drawable.GradientDrawable
 import android.os.Build
 import android.os.SystemClock
 import android.provider.Settings
+import android.view.GestureDetector
 import android.view.Gravity
 import android.view.HapticFeedbackConstants
 import android.view.MotionEvent
 import android.view.View
-import android.view.ViewConfiguration
 import android.view.WindowInsets
 import android.view.WindowManager
 import android.view.accessibility.AccessibilityManager
 import android.widget.Button
 import android.widget.LinearLayout
-import android.widget.TextView
 import android.widget.ScrollView
-import com.bugsnap.ai.MainActivity
-import com.bugsnap.ai.R
 import androidx.core.content.ContextCompat
 import androidx.core.content.edit
-import kotlin.math.abs
+import com.bugsnap.ai.MainActivity
+import com.bugsnap.ai.R
 
-/** Separate touch windows keep the area around the bubble available to the tested app. */
+/** Automatic feedback stays inside one 48 dp window. The menu opens only on user request. */
 class SpikeOverlay(
     private val context: Context,
     private val onMark: () -> Boolean,
     private val onStop: () -> Unit,
-    private val onQuickMark: (Boolean) -> Unit,
 ) {
     private val manager = context.getSystemService(WindowManager::class.java)
     private val accessibility = context.getSystemService(AccessibilityManager::class.java)
-    private var bubble: LinearLayout? = null
-    private var card: View? = null
+    private val prefs = context.getSharedPreferences("capture_controls", Context.MODE_PRIVATE)
+    private var bubble: CompactMarkButton? = null
     private var bubbleParams: WindowManager.LayoutParams? = null
+    private var panel: View? = null
     private var expanded = false
     private var confirmation = false
-    private var lastSignature = ""
-    private var cardKey = ""
-    private var visibleUntil = 0L
+    private var signature = ""
+    private var panelKey = ""
+    private var resultUntil = 0L
+    private var menuUntil = 0L
+    private var orientation = context.resources.configuration.orientation
     private var lastState = SpikeUiState()
-    private val prefs = context.getSharedPreferences("capture_controls", Context.MODE_PRIVATE)
-    val isShowing: Boolean get() = bubble != null
+    val isShowing: Boolean get() = bubble?.isAttachedToWindow == true
 
     fun render(state: SpikeUiState) {
         lastState = state
-        if (state.appVisible) { dismiss(); return }
-        if (!Settings.canDrawOverlays(context)) { dismiss(); return }
-        val active = state.phase == SpikePhase.Recording || state.phase == SpikePhase.Starting
-        val pending = state.markers.any { it.pending }
-        if (!active && !pending && state.markers.isEmpty() && state.phase != SpikePhase.ProjectionLost) {
-            dismiss(); return
+        val active = state.phase in setOf(SpikePhase.Starting, SpikePhase.Recording)
+        if (state.appVisible || !Settings.canDrawOverlays(context) ||
+            (!active && state.markers.isEmpty() && state.phase != SpikePhase.ProjectionLost)) {
+            dismiss()
+            return
+        }
+        if (orientation != context.resources.configuration.orientation) {
+            dismiss()
+            orientation = context.resources.configuration.orientation
         }
         if (bubble == null) createBubble()
-        val signature = "${state.phase}:${state.markers.lastOrNull()?.id}:${state.markers.lastOrNull()?.stage}:${state.lastError}"
-        if (signature != lastSignature) {
-            lastSignature = signature
-            visibleUntil = SystemClock.elapsedRealtime() + timeout(4_000)
-            expanded = false
+        val now = SystemClock.elapsedRealtime()
+        val current = "${state.phase}:${state.markers.lastOrNull()?.id}:${state.markers.lastOrNull()?.stage}:${state.lastError}"
+        if (current != signature) {
+            signature = current
+            resultUntil = now + accessibility.getRecommendedTimeoutMillis(2_000, AccessibilityManager.FLAG_CONTENT_ICONS)
+            closeMenu()
         }
-        val mark = bubble?.getChildAt(0) as? Button
-        mark?.text = if (state.quickMark) context.getString(R.string.spike_mark) else ""
-        mark?.setCompoundDrawablesWithIntrinsicBounds(if (state.quickMark) 0 else R.drawable.ic_mark_bug, 0, 0, 0)
-        bubble?.getChildAt(1)?.visibility = if (state.quickMark) View.VISIBLE else View.GONE
-        mark?.contentDescription = context.getString(if (state.quickMark) R.string.overlay_mark_description else R.string.overlay_controls)
-        val terminal = state.markers.lastOrNull()?.stage in setOf(MarkerStage.Saved, MarkerStage.Failed)
-        val showCard = expanded || pending || state.markers.any { it.stage == MarkerStage.Failed } || state.lastError != null ||
-            state.phase == SpikePhase.ProjectionLost || SystemClock.elapsedRealtime() < visibleUntil
-        if (expanded && SystemClock.elapsedRealtime() > visibleUntil && !accessibility.isEnabled) expanded = false
-        if (showCard) {
-            val key = "$signature:$expanded:$confirmation:${state.quickMark}:${if (expanded) 0 else state.markers.lastOrNull()?.remainingSeconds(state.nowMs)}"
-            if (key != cardKey) { renderCard(state); cardKey = key }
-        } else { removeCard(); cardKey = "" }
-        mark?.isEnabled = active || terminal
+        bubble?.update(state, now < resultUntil)
+        if (expanded && now >= menuUntil && !accessibility.isEnabled) closeMenu()
+        if (expanded) {
+            val key = "$current:$confirmation"
+            if (panelKey != key) { showMenu(); panelKey = key }
+        }
     }
 
     private fun createBubble() {
-        val row = LinearLayout(context).apply { orientation = LinearLayout.HORIZONTAL }
-        row.addView(button(R.string.overlay_controls) {
-            if (lastState.quickMark && lastState.phase == SpikePhase.Recording) acceptMark(it)
-            else { expanded = !expanded; confirmation = false; visibleUntil = SystemClock.elapsedRealtime() + timeout(3_000); render(lastState) }
-        })
-        row.addView(button(R.string.overlay_menu) {
-            expanded = !expanded; confirmation = false; visibleUntil = SystemClock.elapsedRealtime() + timeout(3_000); render(lastState)
-        }.apply { contentDescription = context.getString(R.string.overlay_controls) })
-        val params = params(WindowManager.LayoutParams.WRAP_CONTENT).apply {
-            x = prefs.getInt(positionKey("x"), dp(16))
-            y = prefs.getInt(positionKey("y"), dp(320)).coerceIn(safeTop(), (context.resources.displayMetrics.heightPixels - dp(120)).coerceAtLeast(safeTop()))
+        val view = CompactMarkButton(context).apply {
+            setOnClickListener {
+                if (lastState.quickMark && lastState.phase == SpikePhase.Recording) acceptMark(it)
+                else toggleMenu()
+            }
+            setOnLongClickListener { toggleMenu(); true }
         }
+        val params = params(dp(48)).apply {
+            height = dp(48)
+            x = prefs.getInt(positionKey("x"), dp(8)).coerceIn(dp(8), maximumX())
+            y = prefs.getInt(positionKey("y"), screenHeight() * 2 / 5).coerceIn(safeTop(), maximumY())
+        }
+        if (!attach(view, params)) return
+        bubble = view
         bubbleParams = params
-        bubble = row
-        attach(row, params)
-        installDrag(row.getChildAt(0), params)
+        installGestures(view, params)
     }
 
-    private fun renderCard(state: SpikeUiState) {
-        removeCard()
-        val panel = LinearLayout(context).apply {
+    private fun toggleMenu() {
+        if (expanded) closeMenu()
+        else {
+            expanded = true
+            confirmation = false
+            menuUntil = SystemClock.elapsedRealtime() + accessibility.getRecommendedTimeoutMillis(3_000, AccessibilityManager.FLAG_CONTENT_CONTROLS)
+            panelKey = ""
+            render(lastState)
+        }
+    }
+
+    private fun showMenu() {
+        removePanel()
+        val content = LinearLayout(context).apply {
             orientation = LinearLayout.VERTICAL
-            setPadding(dp(16), dp(12), dp(16), dp(12))
-            background = background(ContextCompat.getColor(context, R.color.bugsnap_surface))
+            setPadding(dp(8), dp(8), dp(8), dp(8))
+            background = background(R.color.bugsnap_surface, 16)
         }
-        val marker = state.markers.lastOrNull()
-        val title = if (state.phase == SpikePhase.ProjectionLost) context.getString(R.string.spike_status_projection_lost)
-            else SpikeFeedbackText.title(context, state)
-        panel.addView(text(title, 16f, when (marker?.stage) {
-            MarkerStage.Saved -> ContextCompat.getColor(context, R.color.bugsnap_success)
-            MarkerStage.Failed -> ContextCompat.getColor(context, R.color.bugsnap_error)
-            else -> ContextCompat.getColor(context, R.color.bugsnap_text)
-        }))
-        panel.addView(text(state.lastError ?: SpikeFeedbackText.detail(context, state), 14f, ContextCompat.getColor(context, R.color.bugsnap_text_muted)))
-        if (marker?.stage == MarkerStage.Saved) {
-            val clip = state.clips.find { it.id == marker.id }
-            if (clip != null) panel.addView(button(R.string.capture_view_clip) { SpikeIntents.openClip(context, clip.clipPath) })
+        if (!lastState.quickMark && lastState.phase == SpikePhase.Recording) {
+            content.addView(button(R.string.spike_mark, primary = true) { acceptMark(it) })
         }
-        if (expanded) {
-            if (state.phase == SpikePhase.Recording) panel.addView(button(R.string.spike_mark) { acceptMark(it) })
-            panel.addView(button(R.string.capture_open_app) { openApp() })
-            panel.addView(button(if (state.quickMark) R.string.quick_mark_disable else R.string.quick_mark_enable) {
-                prefs.edit { putBoolean("quick_mark", !state.quickMark) }
-                onQuickMark(!state.quickMark)
-            })
-            panel.addView(button(R.string.overlay_reset_position) {
-                bubbleParams?.let { it.x = dp(16); it.y = dp(320); bubble?.let { view -> manager.updateViewLayout(view, it) } }
-                render(lastState)
-            })
-            if (state.phase in setOf(SpikePhase.Recording, SpikePhase.Starting)) {
-                panel.addView(button(if (confirmation) R.string.capture_stop_confirm else R.string.capture_stop) {
-                    if (confirmation) onStop() else { confirmation = true; render(lastState) }
+        val actions = mutableListOf<Button>()
+        val latestClip = lastState.clips.firstOrNull()
+        if (latestClip != null) actions.add(button(R.string.capture_view_clip) {
+            closeMenu()
+            SpikeIntents.openClip(context, latestClip.clipPath)
+        })
+        actions.add(button(R.string.overlay_open_app_short) { closeMenu(); openApp() })
+        if (lastState.phase in setOf(SpikePhase.Recording, SpikePhase.Starting)) {
+            actions.add(button(if (confirmation) R.string.overlay_stop_confirm_short else R.string.spike_stop) {
+                if (confirmation) { closeMenu(); onStop() }
+                else {
+                    confirmation = true
+                    menuUntil = SystemClock.elapsedRealtime() + accessibility.getRecommendedTimeoutMillis(3_000, AccessibilityManager.FLAG_CONTENT_CONTROLS)
+                    panelKey = ""
+                    render(lastState)
+                }
+            }.apply { contentDescription = context.getString(if (confirmation) R.string.capture_stop_confirm else R.string.capture_stop) })
+        }
+        actions.add(button(R.string.capture_close) { closeMenu() })
+        actions.chunked(2).forEach { buttons ->
+            val row = LinearLayout(context).apply { orientation = LinearLayout.HORIZONTAL }
+            buttons.forEachIndexed { index, action ->
+                row.addView(action, LinearLayout.LayoutParams(0, LinearLayout.LayoutParams.WRAP_CONTENT, 1f).apply {
+                    if (index == 0 && buttons.size == 2) marginEnd = dp(8)
+                    bottomMargin = dp(8)
                 })
             }
-            panel.addView(button(R.string.capture_close) { expanded = false; visibleUntil = 0; render(lastState) })
+            content.addView(row)
         }
-        val width = minOf(dp(264), screenWidth() - dp(32))
-        panel.measure(View.MeasureSpec.makeMeasureSpec(width, View.MeasureSpec.EXACTLY),
+        val width = minOf(dp(168), screenWidth() - dp(32))
+        content.measure(View.MeasureSpec.makeMeasureSpec(width, View.MeasureSpec.EXACTLY),
             View.MeasureSpec.makeMeasureSpec(0, View.MeasureSpec.UNSPECIFIED))
-        val height = panel.measuredHeight.coerceAtMost((context.resources.displayMetrics.heightPixels - safeTop() - dp(64)).coerceAtLeast(dp(120)))
-        val container = ScrollView(context).apply { addView(panel) }
+        val bubbleY = bubbleParams?.y ?: safeTop()
+        val spaceAbove = (bubbleY - safeTop() - dp(8)).coerceAtLeast(0)
+        val spaceBelow = (screenHeight() - dp(40) - bubbleY - dp(56)).coerceAtLeast(0)
+        val height = content.measuredHeight.coerceAtMost(maxOf(spaceAbove, spaceBelow).coerceAtLeast(dp(48)))
+        val container = ScrollView(context).apply { addView(content) }
         val params = params(width).apply {
             this.height = height
-            x = (bubbleParams?.x ?: dp(16)).coerceAtMost((screenWidth() - width - dp(8)).coerceAtLeast(dp(8)))
-            val maximumY = (context.resources.displayMetrics.heightPixels - height - dp(48)).coerceAtLeast(safeTop())
-            y = ((bubbleParams?.y ?: dp(320)) - height - dp(12)).coerceIn(safeTop(), maximumY)
+            x = (bubbleParams?.x ?: dp(8)).coerceIn(dp(8), (screenWidth() - width - dp(8)).coerceAtLeast(dp(8)))
+            val anchorY = if (spaceAbove >= height) bubbleY - height - dp(8) else bubbleY + dp(56)
+            y = anchorY.coerceIn(safeTop(), (screenHeight() - height - dp(40)).coerceAtLeast(safeTop()))
         }
-        card = container
-        attach(container, params)
+        if (attach(container, params)) panel = container
     }
 
     private fun acceptMark(view: View) {
-        if (onMark()) {
-            view.performHapticFeedback(if (Build.VERSION.SDK_INT >= 30) HapticFeedbackConstants.CONFIRM else HapticFeedbackConstants.VIRTUAL_KEY)
-            expanded = false
-        } else view.performHapticFeedback(if (Build.VERSION.SDK_INT >= 30) HapticFeedbackConstants.REJECT else HapticFeedbackConstants.LONG_PRESS)
+        val feedbackTarget = bubble ?: view
+        closeMenu()
+        val accepted = onMark()
+        feedbackTarget.performHapticFeedback(if (Build.VERSION.SDK_INT >= 30) {
+            if (accepted) HapticFeedbackConstants.CONFIRM else HapticFeedbackConstants.REJECT
+        } else HapticFeedbackConstants.VIRTUAL_KEY)
     }
 
-    private fun installDrag(view: View, params: WindowManager.LayoutParams) {
-        var downX = 0f; var downY = 0f; var originX = 0; var originY = 0; var dragging = false
-        view.setOnTouchListener { target, event ->
-            when (event.actionMasked) {
-                MotionEvent.ACTION_DOWN -> {
-                    downX = event.rawX; downY = event.rawY; originX = params.x; originY = params.y; dragging = false
-                    true
-                }
-                MotionEvent.ACTION_MOVE -> {
-                    val dx = event.rawX - downX; val dy = event.rawY - downY
-                    if (abs(dx) + abs(dy) > ViewConfiguration.get(context).scaledTouchSlop) dragging = true
-                    if (dragging) {
-                        params.x = (originX - dx.toInt()).coerceIn(dp(8), (screenWidth() - (bubble?.width ?: dp(160)) - dp(8)).coerceAtLeast(dp(8)))
-                        params.y = (originY + dy.toInt()).coerceIn(safeTop(), (context.resources.displayMetrics.heightPixels - dp(120)).coerceAtLeast(safeTop()))
-                        bubble?.let { manager.updateViewLayout(it, params) }
-                    }
-                    true
-                }
-                MotionEvent.ACTION_UP -> {
-                    if (!dragging) target.performClick()
-                    else prefs.edit { putInt(positionKey("x"), params.x); putInt(positionKey("y"), params.y) }
-                    true
-                }
-                MotionEvent.ACTION_CANCEL -> { dragging = false; true }
-                else -> false
+    // GestureDetector invokes performClick in onSingleTapUp; the injected-touch UI test covers this path.
+    @android.annotation.SuppressLint("ClickableViewAccessibility")
+    private fun installGestures(view: View, params: WindowManager.LayoutParams) {
+        var originX = 0
+        var originY = 0
+        var dragging = false
+        val detector = GestureDetector(context, object : GestureDetector.SimpleOnGestureListener() {
+            override fun onDown(event: MotionEvent): Boolean {
+                originX = params.x; originY = params.y; dragging = false
+                view.isPressed = true
+                view.invalidate()
+                return true
             }
+            override fun onSingleTapUp(event: MotionEvent): Boolean = view.performClick()
+            override fun onLongPress(event: MotionEvent) { view.performLongClick() }
+            override fun onScroll(first: MotionEvent?, current: MotionEvent, distanceX: Float, distanceY: Float): Boolean {
+                if (first == null) return false
+                dragging = true
+                closeMenu()
+                params.x = (originX - (current.rawX - first.rawX).toInt()).coerceIn(dp(8), maximumX())
+                params.y = (originY + (current.rawY - first.rawY).toInt()).coerceIn(safeTop(), maximumY())
+                manager.updateViewLayout(view, params)
+                return true
+            }
+        })
+        view.setOnTouchListener { _, event ->
+            detector.onTouchEvent(event)
+            if (event.actionMasked == MotionEvent.ACTION_UP || event.actionMasked == MotionEvent.ACTION_CANCEL) {
+                view.isPressed = false
+                view.invalidate()
+                if (dragging) {
+                    params.x = if (params.x < maximumX() / 2) dp(8) else maximumX()
+                    manager.updateViewLayout(view, params)
+                    prefs.edit { putInt(positionKey("x"), params.x); putInt(positionKey("y"), params.y) }
+                }
+            }
+            true
         }
     }
 
-    private fun params(width: Int) = WindowManager.LayoutParams(
-        width, WindowManager.LayoutParams.WRAP_CONTENT, WindowManager.LayoutParams.TYPE_APPLICATION_OVERLAY,
-        WindowManager.LayoutParams.FLAG_NOT_FOCUSABLE or WindowManager.LayoutParams.FLAG_NOT_TOUCH_MODAL,
-        PixelFormat.TRANSLUCENT,
-    ).apply { gravity = Gravity.TOP or Gravity.END }
-
-    private fun attach(view: View, params: WindowManager.LayoutParams) {
-        try { manager.addView(view, params) }
-        catch (error: Exception) { SpikeLog.w("overlay unavailable", error) }
-    }
-
-    private fun button(label: Int, action: (View) -> Unit) = Button(context).apply {
+    private fun button(label: Int, primary: Boolean = false, action: (View) -> Unit) = Button(context).apply {
         text = context.getString(label)
         textSize = 14f
-        setTextColor(ContextCompat.getColor(context, R.color.bugsnap_on_primary_overlay))
-        backgroundTintList = android.content.res.ColorStateList.valueOf(ContextCompat.getColor(context, R.color.bugsnap_primary))
-        minHeight = dp(56)
-        minWidth = dp(56)
-        background = background(ContextCompat.getColor(context, R.color.bugsnap_primary)).apply { cornerRadius = dp(28).toFloat() }
         isAllCaps = false
+        minWidth = 0
+        minHeight = dp(48)
+        minimumWidth = 0
+        minimumHeight = dp(48)
+        setPadding(dp(8), dp(8), dp(8), dp(8))
+        backgroundTintList = ColorStateList.valueOf(ContextCompat.getColor(context, if (primary) R.color.bugsnap_primary else R.color.bugsnap_surface))
+        setTextColor(ContextCompat.getColor(context, if (primary) R.color.bugsnap_on_primary_overlay else R.color.bugsnap_text))
         setOnClickListener(action)
+        layoutParams = LinearLayout.LayoutParams(LinearLayout.LayoutParams.MATCH_PARENT, LinearLayout.LayoutParams.WRAP_CONTENT).apply {
+            bottomMargin = dp(4)
+        }
     }
 
-    private fun text(value: String, size: Float, color: Int) = TextView(context).apply {
-        text = value; textSize = size; setTextColor(color); setPadding(0, dp(4), 0, dp(4))
+    private fun background(color: Int, radius: Int) = GradientDrawable().apply {
+        setColor(ContextCompat.getColor(context, color)); cornerRadius = dp(radius).toFloat()
     }
-    private fun background(color: Int) = GradientDrawable().apply { setColor(color); cornerRadius = dp(16).toFloat() }
+    private fun params(width: Int) = WindowManager.LayoutParams(width, WindowManager.LayoutParams.WRAP_CONTENT,
+        WindowManager.LayoutParams.TYPE_APPLICATION_OVERLAY,
+        WindowManager.LayoutParams.FLAG_NOT_FOCUSABLE or WindowManager.LayoutParams.FLAG_NOT_TOUCH_MODAL,
+        PixelFormat.TRANSLUCENT).apply { gravity = Gravity.TOP or Gravity.END }
+    private fun attach(view: View, params: WindowManager.LayoutParams): Boolean = try {
+        manager.addView(view, params); true
+    } catch (error: Exception) { SpikeLog.w("overlay unavailable", error); false }
+    private fun remove(view: View) { try { manager.removeView(view) } catch (error: Exception) { SpikeLog.w("overlay cleanup failed", error) } }
+    private fun removePanel() { panel?.let { remove(it) }; panel = null }
+    private fun closeMenu() { expanded = false; confirmation = false; panelKey = ""; removePanel() }
     private fun openApp() { context.startActivity(Intent(context, MainActivity::class.java).addFlags(Intent.FLAG_ACTIVITY_NEW_TASK or Intent.FLAG_ACTIVITY_SINGLE_TOP)) }
     private fun dp(value: Int) = (value * context.resources.displayMetrics.density).toInt()
     private fun screenWidth() = context.resources.displayMetrics.widthPixels
+    private fun screenHeight() = context.resources.displayMetrics.heightPixels
+    private fun maximumX() = (screenWidth() - dp(56)).coerceAtLeast(dp(8))
+    private fun maximumY() = (screenHeight() - dp(88)).coerceAtLeast(safeTop())
     private fun positionKey(axis: String) = "$axis-${context.resources.configuration.orientation}"
     private fun safeTop(): Int = if (Build.VERSION.SDK_INT >= 30) {
-        manager.currentWindowMetrics.windowInsets.getInsetsIgnoringVisibility(WindowInsets.Type.systemBars() or WindowInsets.Type.displayCutout()).top + dp(12)
+        manager.currentWindowMetrics.windowInsets.getInsetsIgnoringVisibility(WindowInsets.Type.systemBars() or WindowInsets.Type.displayCutout()).top + dp(8)
     } else dp(40)
-    private fun timeout(value: Int): Int = accessibility.getRecommendedTimeoutMillis(value, AccessibilityManager.FLAG_CONTENT_TEXT or AccessibilityManager.FLAG_CONTENT_CONTROLS)
-    private fun removeCard() { card?.let { remove(it) }; card = null }
-    private fun remove(view: View) { try { manager.removeView(view) } catch (error: Exception) { SpikeLog.w("overlay cleanup failed", error) } }
-    fun dismiss() { removeCard(); bubble?.let { remove(it) }; bubble = null; bubbleParams = null }
+    fun dismiss() { closeMenu(); bubble?.let { remove(it) }; bubble = null; bubbleParams = null }
 }

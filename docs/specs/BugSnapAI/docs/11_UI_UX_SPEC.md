@@ -52,12 +52,13 @@ Quy ước trạng thái: **Empty / Loading / Error / Permission** có cho từn
 - Lỗi: encoder thất bại ⇒ màn FAILED với "Xem bằng chứng đã có".
 
 ### 3.4 Floating Bubble Controller
-- Trạng thái: **Thu nhỏ** (chấm ~48 dp, alpha 0.6, bám cạnh) và **Mở rộng** (cột/ hàng 4 nút: Mark Bug, Note, Pause/Resume, Mở app; Stop cần nhấn giữ hoặc xác nhận).
-- Hành vi: kéo thả; thả gần cạnh ⇒ bám; chạm ⇒ mở rộng, tự thu sau 3 s; **chạm một lần vào Mark Bug trong chế độ thu nhỏ** là cấu hình tùy chọn "Mark nhanh" (chạm đôi để mở rộng) — mặc định tắt để tránh chạm nhầm.
-- Phản hồi Mark: xác nhận nhận thao tác, countdown phần ghi thêm, đang lưu, kết quả đã lưu hoặc lỗi theo `17_CAPTURE_FEEDBACK_UX.md`. Rung xác nhận ngắn tại bề mặt trực tiếp. Nút Xem clip mở đúng marker sau khi lưu hoàn tất.
-- Không che AUT: kích thước nhỏ, vị trí nhớ theo hướng màn hình, tránh vùng gesture hệ thống, tự mờ.
-- Overlay bị từ chối: thông báo có nút Mark Bug/Pause/Stop + Quick Settings tile "Mark Bug".
-- Ẩn khi: phiên PAUSED do người dùng (hiện chấm vàng), phiên kết thúc.
+- Bản 0.1.2 dùng cửa sổ bong bóng cố định 48 × 48 dp, hình tròn nhìn thấy 36 dp. Vùng chạm độc lập với theme nút của OEM.
+- Mark nhanh mặc định bật khi người dùng chưa tùy chỉnh. Chạm để Mark, nhấn giữ mở menu. Lựa chọn đã lưu được giữ khi nâng cấp. Khi Mark nhanh tắt, chạm mở menu rồi chọn Mark Bug.
+- Menu mở chủ động rộng tối đa 168 dp, lưới hai cột, các vùng bấm ít nhất 48 dp. Có Xem clip gần nhất, Mở app, Dừng cần xác nhận và Đóng.
+- Phản hồi tự động trong nút: countdown ghi thêm, vòng xuất file, dấu hoàn tất hoặc chấm than. Chi tiết kết quả và hành động Xem clip có trong thông báo và BugSnap.
+- Kéo để đổi vị trí, thả bám cạnh gần nhất. Vị trí lưu theo hướng màn hình và giữ trong vùng an toàn.
+- Thiếu overlay dùng thông báo. Quick Settings Tile tiếp tục thuộc T-020.
+- Quy cách và bằng chứng nghiệm thu tại [18 — Bong bóng thu gọn](../../../18_COMPACT_OVERLAY_UX.md).
 
 ### 3.5 Bug Marker Details
 - Thành phần: trình phát clip, dải ảnh (Mark/Pre), timestamp, ghi chú (sửa được), trạng thái clip (READY/PENDING/FAILED/LOST), nút **Tạo report AI**, **Soạn tay**, Xóa marker.

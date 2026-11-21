@@ -4,6 +4,8 @@ Ngày 21/11/2026. Trạng thái **luồng phản hồi chính đã triển khai 
 
 [Mở bản phác thảo tương tác](design/capture-feedback.html). Xem [bằng chứng triển khai Android](UI_UX_IMPLEMENTATION.md). Dữ liệu và thời gian xử lý trong bản phác thảo là mô phỏng.
 
+Phiên bản 0.1.2 điều chỉnh thao tác và phản hồi ngoài app theo [18 — Bong bóng thu gọn](18_COMPACT_OVERLAY_UX.md). Phần thiết kế thẻ lớn bên dưới ghi lại phương án 0.1.1.
+
 ## 1. Bối cảnh và mục tiêu
 
 Tester đã xác nhận ghi được video từ APK `0.1.0-t010`. Phản hồi hiện tại chưa giúp họ biết lúc nào quay bắt đầu, thao tác Mark đã được nhận và clip đã lưu xong. Xác nhận này chưa đủ bằng chứng đóng toàn bộ V1–V9.

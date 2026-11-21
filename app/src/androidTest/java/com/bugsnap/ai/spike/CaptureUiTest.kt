@@ -12,6 +12,7 @@ import androidx.compose.ui.test.performClick
 import androidx.test.platform.app.InstrumentationRegistry
 import com.bugsnap.ai.ui.theme.BugSnapTheme
 import org.junit.Assert.assertEquals
+import org.junit.Assert.assertTrue
 import org.junit.Rule
 import org.junit.Test
 import org.junit.Before
@@ -51,22 +52,68 @@ class CaptureUiTest {
         val instrumentation = InstrumentationRegistry.getInstrumentation()
         val context = instrumentation.targetContext
         compose.setContent { BugSnapTheme { SpikeCaptureContent(SpikeUiState(phase = SpikePhase.Recording)) } }
-        val overlay = SpikeOverlay(context, onMark = { true }, onStop = {}, onQuickMark = {})
+        var accepted = 0
+        val overlay = SpikeOverlay(context, onMark = { accepted++; true }, onStop = {})
         val now = SystemClock.elapsedRealtime()
         val marker = SpikeMarker("sample", 3, now, now + 5000)
+        val recording = SpikeUiState(phase = SpikePhase.Recording, nowMs = now, quickMark = true)
+        fun renderAndCapture(state: SpikeUiState, name: String) {
+            compose.runOnIdle { overlay.render(state) }
+            compose.waitForIdle()
+            EmulatorDialogs.dismissStartupError()
+            SystemClock.sleep(400)
+            val node = bubbleNode()
+            val bounds = android.graphics.Rect()
+            node.getBoundsInScreen(bounds)
+            val touchSize = (48 * context.resources.displayMetrics.density).toInt()
+            assertEquals(touchSize, bounds.width())
+            assertEquals(touchSize, bounds.height())
+            assertTrue(nativeNodes().none { it.text?.toString() == "Xem clip" })
+            saveBitmap(instrumentation.uiAutomation.takeScreenshot(), name)
+        }
         try {
-            compose.runOnIdle { overlay.render(SpikeUiState(phase = SpikePhase.Recording, markers = listOf(marker), nowMs = now, quickMark = true)) }
-            compose.waitForIdle()
-            EmulatorDialogs.dismissStartupError()
-            saveBitmap(instrumentation.uiAutomation.takeScreenshot(), "04-overlay-mark-accepted")
-            compose.runOnIdle {
-                overlay.render(SpikeUiState(phase = SpikePhase.Recording, markers = listOf(marker.copy(stage = MarkerStage.Saved)),
-                    clips = listOf(SpikeClipInfo("sample", "sample.mp4", 35000, 30000, 5000, 6500, number = 3)), nowMs = now + 6500, quickMark = true))
+            renderAndCapture(recording, "08-compact-ready")
+            val touchBounds = android.graphics.Rect()
+            bubbleNode().getBoundsInScreen(touchBounds)
+            val downTime = SystemClock.uptimeMillis()
+            for (action in listOf(android.view.MotionEvent.ACTION_DOWN, android.view.MotionEvent.ACTION_UP)) {
+                val event = android.view.MotionEvent.obtain(downTime, SystemClock.uptimeMillis(), action,
+                    touchBounds.exactCenterX(), touchBounds.exactCenterY(), 0)
+                event.source = android.view.InputDevice.SOURCE_TOUCHSCREEN
+                try { assertTrue(instrumentation.uiAutomation.injectInputEvent(event, true)) }
+                finally { event.recycle() }
             }
-            compose.waitForIdle()
-            EmulatorDialogs.dismissStartupError()
-            saveBitmap(instrumentation.uiAutomation.takeScreenshot(), "05-overlay-clip-saved")
+            compose.runOnIdle { assertEquals(1, accepted) }
+            renderAndCapture(recording.copy(markers = listOf(marker)), "09-compact-countdown")
+            renderAndCapture(recording.copy(markers = listOf(marker.copy(stage = MarkerStage.Exporting))), "10-compact-saving")
+            val saved = recording.copy(markers = listOf(marker.copy(stage = MarkerStage.Saved)),
+                clips = listOf(SpikeClipInfo("sample", "sample.mp4", 35000, 30000, 5000, 6500, number = 3)))
+            renderAndCapture(saved, "11-compact-saved")
+            assertTrue(bubbleNode().performAction(android.view.accessibility.AccessibilityNodeInfo.ACTION_LONG_CLICK))
+            compose.waitUntil(5_000) { nativeNodes().any { it.text?.toString() == "Xem clip" } }
+            val menu = nativeNodes().first { it.text?.toString() == "Xem clip" }
+            val bounds = android.graphics.Rect()
+            menu.getBoundsInScreen(bounds)
+            assertTrue(bounds.width() <= (168 * context.resources.displayMetrics.density).toInt())
+            SystemClock.sleep(400)
+            saveBitmap(instrumentation.uiAutomation.takeScreenshot(), "12-compact-menu")
         } finally { compose.runOnIdle { overlay.dismiss() } }
+    }
+
+    private fun nativeNodes(): List<android.view.accessibility.AccessibilityNodeInfo> {
+        val automation = InstrumentationRegistry.getInstrumentation().uiAutomation
+        val result = mutableListOf<android.view.accessibility.AccessibilityNodeInfo>()
+        fun visit(node: android.view.accessibility.AccessibilityNodeInfo?) {
+            if (node == null) return
+            result.add(node)
+            for (index in 0 until node.childCount) visit(node.getChild(index))
+        }
+        automation.windows.forEach { visit(it.root) }
+        return result
+    }
+
+    private fun bubbleNode(): android.view.accessibility.AccessibilityNodeInfo = nativeNodes().first {
+        it.contentDescription?.toString() == InstrumentationRegistry.getInstrumentation().targetContext.getString(com.bugsnap.ai.R.string.overlay_mark_description)
     }
 
     private fun screenshot(name: String) {

@@ -156,6 +156,7 @@ fun SpikeCaptureContent(
                         Text(stringResource(R.string.capture_quick_mark), Modifier.weight(1f), style = MaterialTheme.typography.bodyMedium)
                         Switch(checked = state.quickMark, onCheckedChange = onQuickMark)
                     }
+                    Text(stringResource(R.string.overlay_hold_hint), style = MaterialTheme.typography.bodySmall, color = MaterialTheme.colorScheme.onSurfaceVariant)
                 }
             }
             item {

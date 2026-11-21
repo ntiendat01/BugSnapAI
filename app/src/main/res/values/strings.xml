@@ -85,4 +85,7 @@
     <string name="capture_help">Bắt đầu quay và đồng ý hộp thoại Android. Chuyển sang app cần test. Khi gặp lỗi, mở bong bóng và bấm Mark Bug, hoặc dùng nút trong thông báo. Chờ ghi thêm 5 giây, rồi bấm Xem clip khi lưu xong.</string>
     <string name="capture_help_action">Trợ giúp</string>
     <string name="capture_error_title">Cần kiểm tra</string>
+    <string name="overlay_hold_hint">Nhấn giữ bong bóng để mở điều khiển. Kéo và thả để chuyển sang cạnh màn hình.</string>
+    <string name="overlay_open_app_short">Mở app</string>
+    <string name="overlay_stop_confirm_short">Xác nhận</string>
 </resources>

@@ -2,7 +2,7 @@
 
 Trợ lý kiểm thử Android chạy cùng thiết bị với ứng dụng đang test. Bộ tài liệu đặc tả nằm trong `docs/`.
 
-Nhánh `dev` có nền tảng T-001–T-004 và spike T-010. Bản **0.1.1-t010** bổ sung giao diện quay, phản hồi Mark Bug, điều khiển nổi, thông báo kết quả và danh sách clip đọc lại được khi mở app. Xem [thiết kế UX](docs/17_CAPTURE_FEEDBACK_UX.md) và [bằng chứng triển khai](docs/UI_UX_IMPLEMENTATION.md). Checklist V1–V9 trên OnePlus Ace 5 tiếp tục được theo dõi ở `docs/SPIKE_TESTING.md`.
+Nhánh `dev` có nền tảng T-001–T-004 và spike T-010. Bản **0.1.2-t010** có bong bóng thu gọn 48 dp, phản hồi ngay trong nút và bổ sung giao diện quay, phản hồi Mark Bug, điều khiển nổi, thông báo kết quả và danh sách clip đọc lại được khi mở app. Xem [bong bóng thu gọn](docs/18_COMPACT_OVERLAY_UX.md), [thiết kế UX](docs/17_CAPTURE_FEEDBACK_UX.md) và [bằng chứng triển khai](docs/UI_UX_IMPLEMENTATION.md). Checklist V1–V9 trên OnePlus Ace 5 tiếp tục được theo dõi ở `docs/SPIKE_TESTING.md`.
 
 ## Yêu cầu môi trường
 

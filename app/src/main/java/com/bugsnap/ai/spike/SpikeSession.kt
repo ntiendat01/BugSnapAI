@@ -52,7 +52,7 @@ data class SpikeUiState(
     val thermalStatus: Int? = null,
     val batteryPct: Int? = null,
     val markers: List<SpikeMarker> = emptyList(),
-    val quickMark: Boolean = false,
+    val quickMark: Boolean = true,
     val nowMs: Long = 0,
     val appVisible: Boolean = false,
 )

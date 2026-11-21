@@ -28,7 +28,7 @@ class SpikeViewModel @Inject constructor(
     val state: StateFlow<SpikeUiState> = session.state
 
     init {
-        session.update { it.copy(quickMark = context.getSharedPreferences("capture_controls", Context.MODE_PRIVATE).getBoolean("quick_mark", false)) }
+        session.update { it.copy(quickMark = context.getSharedPreferences("capture_controls", Context.MODE_PRIVATE).getBoolean("quick_mark", true)) }
         viewModelScope.launch {
             val saved = withContext(Dispatchers.IO) { clipIndex.load() }
             session.update { current -> current.copy(clips = (current.clips + saved).distinctBy { it.id }.sortedByDescending { it.savedAtMs }) }
