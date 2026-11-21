@@ -7,7 +7,6 @@ package com.bugsnap.ai.capture.buffer
 internal class PendingClip(
     val id: String,
     val tMarkUs: Long,
-    val preRollUs: Long,
     val postRollUs: Long,
     val generation: Generation,
     preSamples: List<EncodedSample>,
@@ -24,8 +23,10 @@ internal class PendingClip(
             isComplete = true
             return true
         }
-        collected.add(sample)
-        if (sample.ptsUs >= tMarkUs + postRollUs) {
+        if (sample.ptsUs <= collected.last().ptsUs) return false
+        val endPtsUs = tMarkUs + postRollUs
+        if (sample.ptsUs <= endPtsUs) collected.add(sample)
+        if (sample.ptsUs >= endPtsUs) {
             isComplete = true
         }
         return isComplete
@@ -41,7 +42,7 @@ internal class PendingClip(
             samples = samples,
             generation = generation,
             tMarkUs = tMarkUs,
-            actualPreRollUs = (tMarkUs - firstPts).coerceAtLeast(0L),
+            actualPreRollUs = (minOf(tMarkUs, lastPts) - firstPts).coerceAtLeast(0L),
             actualPostRollUs = (lastPts - tMarkUs).coerceAtLeast(0L),
         )
     }

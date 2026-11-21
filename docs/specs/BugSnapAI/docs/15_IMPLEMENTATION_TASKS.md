@@ -67,6 +67,7 @@ flowchart LR
 ---
 ## Phase 1
 ### T-011 EncodedSample + RingBuffer
+- **Trạng thái:** hoàn thành triển khai/kiểm thử JVM ngày 2026-11-21: 100 unit test pass (28 test buffer/export), build/lint 0 lỗi; 1 lượt quay hồi quy trên emulator pass. [Bằng chứng T-011](../../../T011_ROLLING_BUFFER.md). Checklist V1–V9 của T-010 trên Ace 5 vẫn chưa nghiệm thu, không được tính đã đạt từ kết quả này.
 - **Mục tiêu:** ring buffer thuần JVM theo `07`. **Tiên quyết:** T-010.
 - **Triển khai:** cắt tỉa theo GOP, snapshot bất biến, generation, khóa an toàn luồng.
 - **File:** `capture/buffer/*`. **Acceptance:** mọi test §10 của `07` pass.

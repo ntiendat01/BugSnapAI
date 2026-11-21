@@ -7,11 +7,17 @@ package com.bugsnap.ai.capture.buffer
  * This type has no Android dependency.
  */
 class EncodedSample(
-    val data: ByteArray,
+    data: ByteArray,
     val ptsUs: Long,
     val flags: Int,
     val generation: Int,
 ) {
+    private val payload = data.copyOf()
+
+    /** Defensive copies protect samples shared by the ring and multiple snapshots. */
+    val data: ByteArray get() = payload.copyOf()
+    val sizeBytes: Int get() = payload.size
+
     val isKeyFrame: Boolean
         get() = flags and FLAG_KEY_FRAME != 0
 

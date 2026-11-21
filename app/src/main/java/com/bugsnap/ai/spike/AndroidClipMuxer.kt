@@ -82,7 +82,7 @@ class AndroidClipMuxer(
             val info = MediaCodec.BufferInfo()
             for (sample in snapshot.samples) {
                 info.offset = 0
-                info.size = sample.data.size
+                info.size = sample.sizeBytes
                 info.presentationTimeUs = sample.ptsUs - firstPts
                 info.flags = sample.flags
                 muxer.writeSampleData(track, ByteBuffer.wrap(sample.data), info)

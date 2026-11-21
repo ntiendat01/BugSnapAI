@@ -5,170 +5,127 @@ import java.util.concurrent.locks.ReentrantLock
 import kotlin.concurrent.withLock
 
 /**
- * In-RAM ring of encoded samples. Evicts by GOP so the oldest retained
- * sample is always a keyframe. All public methods are thread-safe.
- *
- * Pre-roll cap is [maxDurationUs] (product max: 30 s). [marginUs] keeps one
- * extra GOP so a mark at the eviction edge still starts on a keyframe.
+ * Thread-safe ring of immutable encoded samples. Only complete, decodable GOP prefixes
+ * remain eligible for a mark. Duration and pre/post-roll limits are strict PTS bounds.
  */
 class RingBuffer(
     private val maxDurationUs: Long = DEFAULT_PRE_ROLL_US,
     private val marginUs: Long = DEFAULT_MARGIN_US,
 ) {
     init {
-        require(maxDurationUs > 0L) { "maxDurationUs must be positive" }
-        require(maxDurationUs <= ABSOLUTE_MAX_PRE_ROLL_US) {
-            "maxDurationUs exceeds the 30 s product cap"
-        }
+        require(maxDurationUs in 1..ABSOLUTE_MAX_PRE_ROLL_US) { "Buffer must be within 30 seconds" }
+        require(marginUs >= 0 && marginUs <= Long.MAX_VALUE - maxDurationUs) { "Invalid GOP margin" }
     }
 
     private val lock = ReentrantLock()
     private val samples = ArrayDeque<EncodedSample>()
-    private val generations = LinkedHashMap<Int, Generation>()
     private val pending = ArrayList<PendingClip>()
+    private var generation: Generation? = null
     private var lastPtsUs: Long = -1L
-    private var currentGenerationId: Int = -1
-
-    fun registerGeneration(generation: Generation) {
-        lock.withLock {
-            generations[generation.id] = generation
-            currentGenerationId = generation.id
-            evictOtherGenerationsLocked(generation.id)
-        }
-    }
-
-    fun append(sample: EncodedSample): List<ClipSnapshot> {
-        if (sample.isCodecConfig) return emptyList()
-        val completed = ArrayList<PendingClip>()
-        lock.withLock {
-            samples.addLast(sample)
-            lastPtsUs = sample.ptsUs
-            evictLocked()
-            val iterator = pending.iterator()
-            while (iterator.hasNext()) {
-                val clip = iterator.next()
-                if (clip.offer(sample)) {
-                    iterator.remove()
-                    completed.add(clip)
-                }
-            }
-        }
-        return completed.map { it.finalizeNow() }
-    }
 
     /**
-     * Opens a new marker: snapshot pre-roll now, keep collecting post-roll.
-     * Returns null if there is no keyframe in the current generation yet.
+     * IDs increase within a stream. Stale/reused IDs cannot replace a newer configuration.
+     * Pending old-generation clips close on the first new sample, or forceFinalizePending.
      */
+    fun registerGeneration(next: Generation): Boolean = lock.withLock {
+        val current = generation
+        if (current != null && next.id <= current.id) return next.sameConfiguration(current)
+        generation = next
+        samples.clear()
+        lastPtsUs = -1L
+        true
+    }
+
+    /** Stale, duplicate, backwards, empty and codec-config samples do not enter the ring. */
+    fun append(sample: EncodedSample): List<ClipSnapshot> = lock.withLock {
+        val current = generation ?: return emptyList()
+        if (sample.generation != current.id || sample.isCodecConfig || sample.sizeBytes == 0 ||
+            sample.ptsUs < current.startPtsUs || sample.ptsUs <= lastPtsUs
+        ) return emptyList()
+        lastPtsUs = sample.ptsUs
+        if (samples.isNotEmpty() || sample.isKeyFrame) samples.addLast(sample)
+        evictLocked()
+        val completed = ArrayList<ClipSnapshot>()
+        val iterator = pending.iterator()
+        while (iterator.hasNext()) {
+            val clip = iterator.next()
+            if (clip.offer(sample)) {
+                iterator.remove()
+                completed.add(clip.finalizeNow())
+            }
+        }
+        completed
+    }
+
+    /** A null mark time samples the latest accepted PTS while holding the same lock. */
     fun mark(
         id: String,
-        tMarkUs: Long = lastPts(),
+        tMarkUs: Long? = null,
         preRollUs: Long = maxDurationUs,
         postRollUs: Long = DEFAULT_POST_ROLL_US,
-    ): MarkResult {
-        require(preRollUs <= ABSOLUTE_MAX_PRE_ROLL_US) { "pre-roll exceeds 30 s cap" }
-        lock.withLock {
-            val generation = generations[currentGenerationId]
-                ?: return MarkResult.Rejected("no generation registered")
-            val pre = preRollSamplesLocked(tMarkUs, preRollUs, generation.id)
-                ?: return MarkResult.Rejected("no keyframe in current generation")
-            val pendingClip = PendingClip(
-                id = id,
-                tMarkUs = tMarkUs,
-                preRollUs = preRollUs,
-                postRollUs = postRollUs,
-                generation = generation,
-                preSamples = pre,
-            )
-            if (pendingClip.isComplete) {
-                return MarkResult.Ready(pendingClip.finalizeNow())
-            }
-            pending.add(pendingClip)
-            return MarkResult.Pending(id)
+    ): MarkResult = lock.withLock {
+        if (id.isBlank() || pending.any { it.id == id }) return MarkResult.Rejected("invalid or pending marker ID")
+        if (preRollUs !in 0..maxDurationUs || postRollUs !in 0..MAX_POST_ROLL_US) {
+            return MarkResult.Rejected("invalid pre/post-roll")
+        }
+        val current = generation ?: return MarkResult.Rejected("no generation registered")
+        val markPts = tMarkUs ?: lastPtsUs
+        if (markPts < 0 || markPts > lastPtsUs || markPts > Long.MAX_VALUE - postRollUs) {
+            return MarkResult.Rejected("mark PTS is outside the captured timeline")
+        }
+        val available = samples.toList()
+        val startBound = (markPts - preRollUs).coerceAtLeast(0)
+        val start = available.indexOfFirst { it.isKeyFrame && it.ptsUs >= startBound && it.ptsUs <= markPts }
+        if (start < 0) return MarkResult.Rejected("no keyframe within requested pre-roll")
+        val selected = available.drop(start)
+        val clip = PendingClip(
+            id = id, tMarkUs = markPts, postRollUs = postRollUs, generation = current,
+            preSamples = selected.takeWhile { it.ptsUs <= markPts },
+        )
+        // Explicit historical marks also collect post-roll which is already in the ring.
+        for (sample in selected) {
+            if (sample.ptsUs > markPts && clip.offer(sample)) break
+        }
+        if (clip.isComplete) MarkResult.Ready(clip.finalizeNow()) else {
+            pending.add(clip)
+            MarkResult.Pending(id)
         }
     }
 
     fun lastPts(): Long = lock.withLock { lastPtsUs }
 
-    fun stats(): BufferStats = lock.withLock { statsLocked() }
-
-    fun forceFinalizePending(): List<ClipSnapshot> {
-        val clips: List<PendingClip>
-        lock.withLock {
-            clips = pending.toList()
-            pending.clear()
-        }
-        return clips.map { it.finalizeNow() }
+    fun stats(): BufferStats = lock.withLock {
+        BufferStats(
+            sampleCount = samples.size,
+            keyframeCount = samples.count { it.isKeyFrame },
+            durationUs = if (samples.size < 2) 0 else samples.last().ptsUs - samples.first().ptsUs,
+            ramBytes = samples.sumOf { it.sizeBytes.toLong() },
+            lastPtsUs = lastPtsUs,
+            currentGenerationId = generation?.id ?: -1,
+            pendingCount = pending.size,
+        )
     }
 
-    fun clear() {
-        lock.withLock {
-            samples.clear()
-            generations.clear()
-            pending.clear()
-            lastPtsUs = -1L
-            currentGenerationId = -1
-        }
+    fun forceFinalizePending(): List<ClipSnapshot> = lock.withLock {
+        pending.map { it.finalizeNow() }.also { pending.clear() }
+    }
+
+    /** Drops ring and pending clips. Call forceFinalizePending first when stopping capture. */
+    fun clear() = lock.withLock {
+        samples.clear()
+        pending.clear()
+        generation = null
+        lastPtsUs = -1L
     }
 
     fun pendingCount(): Int = lock.withLock { pending.size }
 
-    private fun preRollSamplesLocked(
-        tMarkUs: Long,
-        preRollUs: Long,
-        generationId: Int,
-    ): List<EncodedSample>? {
-        val ofGen = samples.filter { it.generation == generationId && !it.isCodecConfig }
-        if (ofGen.isEmpty()) return null
-        val startBound = tMarkUs - preRollUs
-        val keyframes = ofGen.filter { it.isKeyFrame }
-        if (keyframes.isEmpty()) return null
-        val startKey = keyframes.lastOrNull { it.ptsUs <= startBound } ?: keyframes.first()
-        return ofGen.filter { it.ptsUs >= startKey.ptsUs && it.ptsUs <= tMarkUs }
-    }
-
     private fun evictLocked() {
-        if (samples.isEmpty() || lastPtsUs < 0L) return
-        val cutoff = lastPtsUs - maxDurationUs - marginUs
-        val firstEligibleKey = samples.lastOrNull { it.isKeyFrame && it.ptsUs <= cutoff }
-            ?: return
-        while (samples.isNotEmpty() && samples.first().ptsUs < firstEligibleKey.ptsUs) {
-            samples.removeFirst()
-        }
-    }
-
-    private fun evictOtherGenerationsLocked(keepGenerationId: Int) {
-        val iterator = samples.iterator()
-        while (iterator.hasNext()) {
-            if (iterator.next().generation != keepGenerationId) {
-                iterator.remove()
-            }
-        }
-        val stale = generations.keys.filter { it != keepGenerationId }
-        stale.forEach { generations.remove(it) }
-    }
-
-    private fun statsLocked(): BufferStats {
-        val duration = if (samples.size < 2) {
-            0L
-        } else {
-            samples.last().ptsUs - samples.first().ptsUs
-        }
-        var ram = 0L
-        var keys = 0
-        for (sample in samples) {
-            ram += sample.data.size
-            if (sample.isKeyFrame) keys += 1
-        }
-        return BufferStats(
-            sampleCount = samples.size,
-            keyframeCount = keys,
-            durationUs = duration,
-            ramBytes = ram,
-            lastPtsUs = lastPtsUs,
-            currentGenerationId = currentGenerationId,
-            pendingCount = pending.size,
-        )
+        val cutoff = (lastPtsUs - (maxDurationUs + marginUs)).coerceAtLeast(0)
+        // Evict whole GOPs. If no usable keyframe remains, wait for a new keyframe rather
+        // than retain a broken or unbounded GOP when an encoder stops emitting sync frames.
+        while (samples.isNotEmpty() && samples.first().ptsUs < cutoff) samples.removeFirst()
+        while (samples.isNotEmpty() && !samples.first().isKeyFrame) samples.removeFirst()
     }
 
     companion object {
@@ -176,6 +133,7 @@ class RingBuffer(
         const val ABSOLUTE_MAX_PRE_ROLL_US = 30_000_000L
         const val DEFAULT_MARGIN_US = 1_000_000L
         const val DEFAULT_POST_ROLL_US = 5_000_000L
+        const val MAX_POST_ROLL_US = 10_000_000L
     }
 }
 

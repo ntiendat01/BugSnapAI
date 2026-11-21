@@ -89,6 +89,42 @@ class MarkerExportQueueTest {
         assertEquals(2, (results[0] as ExportResult.Failure).attempt)
     }
 
+    @Test
+    fun manyMarkersUseDistinctPathsAndAtMostThreeParallelExporters() {
+        val entered = CountDownLatch(3)
+        val done = CountDownLatch(10)
+        val active = AtomicInteger()
+        val peak = AtomicInteger()
+        val paths = CopyOnWriteArrayList<String>()
+        val results = CopyOnWriteArrayList<ExportResult>()
+        val queue = MarkerExportQueue(
+            exporter = ClipExporter { snapshot, dir ->
+                val count = active.incrementAndGet()
+                peak.updateAndGet { maxOf(it, count) }
+                try {
+                    entered.countDown()
+                    check(entered.await(5, TimeUnit.SECONDS)) { "Three exports must run concurrently" }
+                    paths.add(dir)
+                    ExportResult.Success(snapshot.id, "$dir/clip.mp4", null, null, 1_000, 500, 500)
+                } finally {
+                    active.decrementAndGet()
+                }
+            },
+            outputRoot = "markers",
+            onResult = { results.add(it); done.countDown() },
+        )
+        try {
+            repeat(10) { queue.submit(snapshot("marker-$it")) }
+            assertTrue(done.await(10, TimeUnit.SECONDS))
+            assertEquals(3, peak.get())
+            assertEquals(10, paths.distinct().size)
+            assertEquals((0..9).map { "markers/marker-$it" }.toSet(), paths.toSet())
+            assertTrue(results.all { it is ExportResult.Success })
+        } finally {
+            queue.shutdown()
+        }
+    }
+
     private fun snapshot(id: String) = ClipSnapshot(
         id = id,
         samples = listOf(
