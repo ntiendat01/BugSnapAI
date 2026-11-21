@@ -4,6 +4,8 @@ Trợ lý kiểm thử Android chạy cùng thiết bị với ứng dụng đan
 
 Nhánh `dev` có nền tảng T-001–T-004 và spike T-010. Bản **0.1.2-t010** có bong bóng thu gọn 48 dp, phản hồi ngay trong nút và bổ sung giao diện quay, phản hồi Mark Bug, điều khiển nổi, thông báo kết quả và danh sách clip đọc lại được khi mở app. Xem [bong bóng thu gọn](docs/18_COMPACT_OVERLAY_UX.md), [thiết kế UX](docs/17_CAPTURE_FEEDBACK_UX.md) và [bằng chứng triển khai](docs/UI_UX_IMPLEMENTATION.md). Checklist V1–V9 trên OnePlus Ace 5 tiếp tục được theo dõi ở `docs/SPIKE_TESTING.md`.
 
+T-014 bổ sung [EvidenceStore](docs/T014_EVIDENCE_STORE.md) cho kiến trúc phiên, gồm đường dẫn tương đối, ghi atomic, xóa phiên, dọn `.part` và kiểm dung lượng. Việc nối store vào pipeline quay thuộc T-015/T-016; video mới của spike được công bố vào `DCIM/BugSnap` theo [thay đổi lưu video](docs/DCIM_VIDEO_STORAGE.md).
+
 ## Yêu cầu môi trường
 
 - JDK 17
@@ -52,4 +54,4 @@ Mở project bằng Android Studio (AGP 9.5 / Gradle 9.6). Thiết bị chính �
 adb logcat -s BugSnapSpike:V
 ```
 
-Màn hình mở lên hướng dẫn quay thử: Bắt đầu quay → đồng ý MediaProjection → Mark Bug → ghi thêm 5 giây → đang lưu → Xem clip. Khi đang dùng app khác, chạm bong bóng để mở Mark Bug hoặc bật Mark nhanh một chạm. Clip hiển thị số ảnh thực tế đã trích. Clip nằm trong bộ nhớ riêng của app (`files/spike/`). Hướng dẫn V1–V9: `docs/SPIKE_TESTING.md`.
+Màn hình mở lên hướng dẫn quay thử: Bắt đầu quay → đồng ý MediaProjection → Mark Bug → ghi thêm 5 giây → đang lưu → Xem clip. Khi đang dùng app khác, chạm bong bóng để mở Mark Bug hoặc bật Mark nhanh một chạm. Clip hiển thị số ảnh thực tế đã trích. Video mới nằm trong `DCIM/BugSnap`, xem được trong Thư viện Android. Clip cũ, ảnh bằng chứng và index vẫn ở bộ nhớ riêng của app (`files/spike/`). Hướng dẫn V1–V9: `docs/SPIKE_TESTING.md`.

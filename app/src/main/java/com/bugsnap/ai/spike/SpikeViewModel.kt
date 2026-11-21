@@ -16,6 +16,8 @@ import kotlinx.coroutines.launch
 import kotlinx.coroutines.Dispatchers
 import kotlinx.coroutines.withContext
 import com.bugsnap.ai.R
+import com.bugsnap.ai.data.files.EvidenceStore
+import com.bugsnap.ai.data.media.VideoGalleryStore
 import java.io.File
 import javax.inject.Inject
 
@@ -24,12 +26,20 @@ class SpikeViewModel @Inject constructor(
     @ApplicationContext private val context: Context,
     private val session: SpikeSession,
     private val clipIndex: SpikeClipIndex,
+    private val evidenceStore: EvidenceStore,
+    private val gallery: VideoGalleryStore,
 ) : ViewModel() {
     val state: StateFlow<SpikeUiState> = session.state
 
     init {
         session.update { it.copy(quickMark = context.getSharedPreferences("capture_controls", Context.MODE_PRIVATE).getBoolean("quick_mark", true)) }
         viewModelScope.launch {
+            if (evidenceStore.cleanupOrphanParts().isErr) {
+                session.setError(context.getString(R.string.evidence_cleanup_failed))
+            }
+            if (gallery.cleanupPendingVideos().isErr) {
+                session.setError(context.getString(R.string.video_cleanup_failed))
+            }
             val saved = withContext(Dispatchers.IO) { clipIndex.load() }
             session.update { current -> current.copy(clips = (current.clips + saved).distinctBy { it.id }.sortedByDescending { it.savedAtMs }) }
         }

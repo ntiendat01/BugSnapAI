@@ -3,14 +3,18 @@ package com.bugsnap.ai.spike
 import android.content.Context
 import android.content.Intent
 import androidx.core.content.FileProvider
+import androidx.core.net.toUri
 import com.bugsnap.ai.R
+import com.bugsnap.ai.data.media.VideoGalleryStore
 import java.io.File
 
 object SpikeIntents {
     fun viewClip(context: Context, path: String): Intent? {
-        val file = File(path)
-        if (!file.isFile || !file.canonicalPath.startsWith(context.filesDir.canonicalPath + File.separator)) return null
-        val uri = FileProvider.getUriForFile(context, "${context.packageName}.fileprovider", file)
+        val uri = if (VideoGalleryStore.isVideoUri(path)) path.toUri() else {
+            val file = File(path)
+            if (!file.isFile || !file.canonicalPath.startsWith(context.filesDir.canonicalPath + File.separator)) return null
+            FileProvider.getUriForFile(context, "${context.packageName}.fileprovider", file)
+        }
         return Intent(Intent.ACTION_VIEW).setDataAndType(uri, "video/mp4")
             .addFlags(Intent.FLAG_GRANT_READ_URI_PERMISSION)
     }

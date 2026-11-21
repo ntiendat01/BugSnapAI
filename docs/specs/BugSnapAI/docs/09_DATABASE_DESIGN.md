@@ -3,7 +3,7 @@
 ## 1. Công nghệ
 - **Room (SQLite)** cho dữ liệu quan hệ + **FTS4** cho tìm kiếm thư viện bug.
 - **DataStore (Preferences)** cho cài đặt (độ dài buffer 15/30 s, mặc định 30; post-roll, URL backend, trần ngân sách).
-- **File store riêng của app** (`filesDir`/`getExternalFilesDir`) cho clip/ảnh; **không** dùng MediaStore công khai mặc định (giữ riêng tư). Chia sẻ qua `FileProvider`.
+- **File store riêng của app** cho ảnh, index, dữ liệu phiên và video tạm. Theo yêu cầu chủ dự án sau T-014, **video mới của spike lưu công khai trong `DCIM/BugSnap` qua MediaStore**. Clip cũ vẫn ở khu vực riêng và mở qua FileProvider. Xem [DCIM_VIDEO_STORAGE.md](../../../DCIM_VIDEO_STORAGE.md).
 - Token backend: lưu bằng Android Keystore (EncryptedFile/ `Tink`, ghi ADR khi chọn), không để trong DataStore thô.
 
 ## 2. Sơ đồ quan hệ
@@ -118,6 +118,19 @@ files/
 ```
 - Ghi `.part` rồi rename atomic; dọn `.part` mồ côi khi khởi động.
 - `exports/` dọn khi thoát phiên hoặc sau 24 giờ.
+- Bố cục trên là store riêng của kiến trúc phiên. Lưu công khai video là bước MediaStore riêng; không đổi `relPath` trong Room thành đường dẫn tuyệt đối DCIM. Spike hiện lưu URI MediaStore trong index JSON. Khi triển khai T-015/T-016 cần nối bước công bố video theo ADR-21.
+
+### 6.1. Hợp đồng EvidenceStore (T-014)
+- Gốc thực tế là `Context.filesDir`, Hilt cấp một `EvidenceStore` singleton. `EvidencePaths` sinh đường dẫn `sessions/...` cho marker, frame và export. Chỉ lưu `StoredEvidenceFile.relPath` cùng `sizeBytes` vào Room.
+- `writeAtomic(relPath, expectedBytes, writer)` chạy trên IO. Callback ghi file tạm duy nhất cùng thư mục, đóng tài nguyên trước khi trả về. Store kiểm file thường, khác rỗng, `fsync`, rồi `Files.move(ATOMIC_MOVE, REPLACE_EXISTING)`. Không hỗ trợ atomic thì trả lỗi. Ghi lỗi/hủy sẽ dọn file tạm và giữ bản hoàn chỉnh cũ. Lỗi dọn tạm được gắn vào nguyên nhân lỗi, lần mở app sau có thể dọn lại.
+- `read(relPath, reader)` cung cấp File trong callback trên IO. Callback phải hoàn thành thao tác tại chỗ, không giữ File hoặc gọi ngược vào store. Chia sẻ ra ngoài bằng URI `FileProvider` cho `sessions/` và cấp quyền đọc theo intent.
+- Từ chối đường dẫn tuyệt đối, `..`, thành phần rỗng, dấu phân cách không hợp lệ, tên đích `.part`, bố cục ngoài §6 và symlink bên dưới gốc store. Xóa cây thư mục không đi theo symlink.
+- Ghi/đọc cùng file được tuần tự hóa. Các file khác nhau có thể ghi đồng thời. `deleteSession()` và `cleanupOrphanParts()` lấy khóa độc quyền, chờ các thao tác đang chạy xong. Coordinator phải dừng/join tác vụ xuất của phiên trước khi xóa để tác vụ đến sau không tạo lại thư mục.
+- `cleanupOrphanParts()` chỉ quét `sessions/`, giữ file hoàn chỉnh và khu vực `spike/`. Được gọi khi tạo ViewModel màn hình chính bằng `viewModelScope`; lỗi có thông báo để thử lại khi mở app.
+- `storageStatus()` dùng `StatFs.availableBytes`. `shouldWarn` khi còn dưới 500 MiB. `checkCanStartSession()` trả `StorageLow` dưới 200 MiB. Hai ngưỡng dùng `1024²` byte/MB. Ghi clip đang chạy chỉ kiểm đủ `expectedBytes` (mặc định tối thiểu 1 byte), không áp lại ngưỡng bắt đầu phiên; ENOSPC vẫn trả `StorageLow`. Ước lượng không đặt trước dung lượng.
+- Store chỉ quản lý file. Use case xóa phiên chịu trách nhiệm thứ tự file → DB và `pendingDelete` ở §4. Retention/TTL export thuộc T-038. Nối pipeline quay với Room và file store thuộc T-015/T-016; spike giữ ảnh/index ở `files/spike/`, công bố video mới qua MediaStore vào `DCIM/BugSnap` (ADR-21).
+
+Chi tiết triển khai và kết quả kiểm thử ở [T014_EVIDENCE_STORE.md](../../../T014_EVIDENCE_STORE.md).
 
 ## 7. Retention
 Mặc định tự xóa **clip** của phiên cũ hơn 14 ngày (giữ ảnh + report) — cấu hình 7/14/30/không bao giờ; luôn có "Xóa phiên" thủ công. Cảnh báo dung lượng theo NFR-8.

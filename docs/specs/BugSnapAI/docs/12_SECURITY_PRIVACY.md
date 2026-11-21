@@ -8,7 +8,7 @@ BugSnap AI nhìn thấy nội dung của app khác ⇒ quyền riêng tư là y�
 ## 2. Mô hình mối đe dọa (rút gọn)
 | Tài sản | Mối đe dọa | Biện pháp |
 |---|---|---|
-| Clip/ảnh chứa dữ liệu cá nhân của AUT (tài khoản test, OTP, thông tin thẻ test) | Rò rỉ qua share/backup/log | Lưu riêng của app, tắt cloud backup, share chỉ qua `FileProvider` khi người dùng chọn, không log nội dung |
+| Clip/ảnh chứa dữ liệu cá nhân của AUT (tài khoản test, OTP, thông tin thẻ test) | Rò rỉ qua share/backup/log | Ảnh/index lưu riêng, tắt backup của app; video mới lưu DCIM công khai theo yêu cầu chủ dự án (ADR-21), mở qua URI MediaStore; không log nội dung |
 | Khóa API AI | Lộ trong APK | Khóa chỉ ở backend; app chỉ giữ bearer token theo thiết bị trong Keystore |
 | Token backend | Đánh cắp | Mã hóa bằng Keystore, thu hồi được, TLS |
 | Nội dung gửi AI | Gửi nhầm dữ liệu nhạy cảm | Màn duyệt bắt buộc, chọn từng ảnh, redaction (V2) |
@@ -21,7 +21,7 @@ BugSnap AI nhìn thấy nội dung của app khác ⇒ quyền riêng tư là y�
 - Cảnh báo bên cạnh nút bắt đầu: "Chỉ ghi ứng dụng/dữ liệu bạn có quyền kiểm thử. Không dùng dữ liệu thật của người dùng cuối."
 
 ## 4. Lưu trữ và xóa
-- Dữ liệu ở bộ nhớ riêng của app; `android:allowBackup="false"` hoặc loại trừ qua `dataExtractionRules`.
+- Ảnh/index/dữ liệu phiên ở bộ nhớ riêng của app, `android:allowBackup="false"`. Video mới của spike công bố vào `DCIM/BugSnap` theo yêu cầu chủ dự án; video hiển thị trong Thư viện, có thể còn sau khi gỡ app và chịu cài đặt sao lưu Thư viện của thiết bị. Clip cũ chưa tự chuyển. Xem [hợp đồng lưu DCIM](../../../DCIM_VIDEO_STORAGE.md).
 - Retention mặc định 14 ngày cho clip (xem `09`); xóa phiên xóa file thật; "Xóa toàn bộ dữ liệu" trong Settings.
 - Xóa an toàn ở mức app (không đảm bảo xóa vật lý trên flash); ghi rõ giới hạn này.
 - Ghi file tạm có tên không chứa thông tin nhạy cảm.

@@ -85,6 +85,7 @@ flowchart LR
 - **Test:** unit với mẫu giả + instrumentation mux thật. **DoD+:** dọn `.part` mồ côi.
 
 ### T-014 EvidenceStore
+- **Trạng thái:** hoàn thành 2026-11-21. Build/lint pass (0 error), 82 unit test và 24 instrumentation pass (19 test T-014 + 5 test Room). [Triển khai và bằng chứng](../../../T014_EVIDENCE_STORE.md). Sau T-014, video mới của spike chuyển sang DCIM/BugSnap theo ADR-21; ảnh/index vẫn riêng. Nối pipeline phiên thuộc T-015/T-016.
 - **Mục tiêu:** quản lý file theo bố cục `09` §6. **Tiên quyết:** T-004.
 - **Triển khai:** đường dẫn tương đối, ghi atomic, xóa phiên, kiểm dung lượng.
 - **File:** `data/files/EvidenceStore.kt`. **Acceptance:** xóa phiên xóa hết file; không đường dẫn tuyệt đối trong DB.

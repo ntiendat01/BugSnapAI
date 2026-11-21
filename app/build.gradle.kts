@@ -56,6 +56,11 @@ ksp {
 }
 
 dependencies {
+    constraints {
+        implementation(libs.kotlinx.serialization.core) {
+            because("Align the shared app/test runtime with Room's schema serializer (ADR-20)")
+        }
+    }
     implementation(platform(libs.compose.bom))
     implementation(libs.compose.ui)
     implementation(libs.compose.ui.tooling.preview)

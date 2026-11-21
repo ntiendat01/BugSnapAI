@@ -19,6 +19,7 @@ enum class SpikePhase {
 
 data class SpikeClipInfo(
     val id: String,
+    /** MediaStore content URI for new clips; private file path for legacy recordings. */
     val clipPath: String,
     val durationMs: Long,
     val actualPreRollMs: Long,

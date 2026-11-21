@@ -49,7 +49,7 @@
     <string name="capture_cancel">Tiếp tục quay</string>
     <string name="capture_open_app">Mở BugSnap</string>
     <string name="capture_view_clip">Xem clip</string>
-    <string name="capture_clip_location">Lưu trong BugSnap · Clip của phiên</string>
+    <string name="capture_clip_location">Video lưu tại DCIM/BugSnap · Xem trong Thư viện của máy</string>
     <string name="capture_clips">Clip của phiên</string>
     <string name="capture_empty">Chưa có clip. Bấm Mark Bug khi đang quay để lưu bằng chứng.</string>
     <string name="capture_saved_count">%1$d đã lưu</string>
@@ -82,10 +82,14 @@
     <string name="overlay_mark_description">Đánh dấu lỗi và lưu clip</string>
     <string name="overlay_reset_position">Đặt lại vị trí bong bóng</string>
     <string name="capture_help_title">Cách lưu một clip</string>
-    <string name="capture_help">Bắt đầu quay và đồng ý hộp thoại Android. Chuyển sang app cần test. Khi gặp lỗi, mở bong bóng và bấm Mark Bug, hoặc dùng nút trong thông báo. Chờ ghi thêm 5 giây, rồi bấm Xem clip khi lưu xong.</string>
+    <string name="capture_help">Bắt đầu quay và đồng ý hộp thoại Android. Chuyển sang app cần test. Khi gặp lỗi, mở bong bóng và bấm Mark Bug, hoặc dùng nút trong thông báo. Chờ ghi thêm 5 giây, rồi bấm Xem clip khi lưu xong. Video mới nằm trong DCIM/BugSnap và Thư viện của máy.</string>
     <string name="capture_help_action">Trợ giúp</string>
     <string name="capture_error_title">Cần kiểm tra</string>
     <string name="overlay_hold_hint">Nhấn giữ bong bóng để mở điều khiển. Kéo và thả để chuyển sang cạnh màn hình.</string>
     <string name="overlay_open_app_short">Mở app</string>
     <string name="overlay_stop_confirm_short">Xác nhận</string>
+    <string name="evidence_cleanup_failed">Chưa dọn được file bằng chứng đang lưu dở. Hãy mở lại app để thử lại.</string>
+    <string name="video_gallery_failed">Chưa lưu được video vào DCIM/BugSnap. Bản ghi tạm vẫn còn trong BugSnap. Kiểm tra dung lượng rồi thử lại.</string>
+    <string name="video_cleanup_failed">Chưa dọn được video đang lưu dở trong DCIM/BugSnap. Hãy mở lại app để thử lại.</string>
+    <string name="video_cache_cleanup_failed">Video đã lưu trong DCIM/BugSnap. Chưa dọn được bản ghi tạm trong app.</string>
 </resources>

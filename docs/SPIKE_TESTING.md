@@ -36,7 +36,7 @@ Tag duy nhất: `BugSnapSpike`. Các dòng hữu ích:
 | `rotation/resize new encoder …` | V9 — đổi generation khi xoay |
 | `posted V7 test notification body=SPIKE-NOTIF-VISIBLE` | V7 — đã gửi thông báo thử |
 
-Clip và ảnh (chỉ sau Mark): `adb shell "run-as com.bugsnap.ai ls -l files/spike"` rồi `adb exec-out run-as com.bugsnap.ai cat files/spike/.../clip.mp4 > clip.mp4`. Hoặc bấm item clip trên UI (mở bằng FileProvider).
+Video mới sau Mark nằm trong `DCIM/BugSnap`, có thể xem bằng Thư viện hoặc nút Xem clip (URI MediaStore). Ảnh, index và clip cũ còn ở `files/spike/`; chỉ clip cũ dùng FileProvider. Trên máy phát triển có thể kiểm tra bằng `adb shell ls -l /sdcard/DCIM/BugSnap`. Xem `docs/DCIM_VIDEO_STORAGE.md`.
 
 Màn hình spike cũng hiện: thời gian đã ghi, độ dài buffer, RAM, FPS, khoảng I-frame, generation, overlay, nhiệt, pin, latency Mark.
 
