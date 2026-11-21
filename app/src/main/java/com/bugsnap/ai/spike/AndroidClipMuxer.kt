@@ -121,11 +121,17 @@ class AndroidClipMuxer(
         return try {
             retriever.setDataSource(clip.absolutePath)
             val bitmap = retriever.getFrameAtTime(timeUs, MediaMetadataRetriever.OPTION_CLOSEST) ?: return null
-            FileOutputStream(output).use { stream ->
-                bitmap.compress(Bitmap.CompressFormat.JPEG, 85, stream)
+            val part = File(output.parentFile, output.name + ".part")
+            try {
+                val compressed = FileOutputStream(part).use { stream ->
+                    bitmap.compress(Bitmap.CompressFormat.JPEG, 85, stream)
+                }
+                check(compressed && part.length() > 0 && part.renameTo(output)) { "image write failed" }
+                output
+            } finally {
+                bitmap.recycle()
+                if (part.exists()) part.delete()
             }
-            bitmap.recycle()
-            output
         } catch (error: Exception) {
             SpikeLog.w("frame extract failed at timeUs=$timeUs", error)
             if (output.exists()) output.delete()

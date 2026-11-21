@@ -11,6 +11,11 @@ import androidx.lifecycle.ViewModel
 import dagger.hilt.android.lifecycle.HiltViewModel
 import dagger.hilt.android.qualifiers.ApplicationContext
 import kotlinx.coroutines.flow.StateFlow
+import androidx.lifecycle.viewModelScope
+import kotlinx.coroutines.launch
+import kotlinx.coroutines.Dispatchers
+import kotlinx.coroutines.withContext
+import com.bugsnap.ai.R
 import java.io.File
 import javax.inject.Inject
 
@@ -18,8 +23,22 @@ import javax.inject.Inject
 class SpikeViewModel @Inject constructor(
     @ApplicationContext private val context: Context,
     private val session: SpikeSession,
+    private val clipIndex: SpikeClipIndex,
 ) : ViewModel() {
     val state: StateFlow<SpikeUiState> = session.state
+
+    init {
+        session.update { it.copy(quickMark = context.getSharedPreferences("capture_controls", Context.MODE_PRIVATE).getBoolean("quick_mark", false)) }
+        viewModelScope.launch {
+            val saved = withContext(Dispatchers.IO) { clipIndex.load() }
+            session.update { current -> current.copy(clips = (current.clips + saved).distinctBy { it.id }.sortedByDescending { it.savedAtMs }) }
+        }
+    }
+
+    fun setQuickMark(enabled: Boolean) {
+        context.getSharedPreferences("capture_controls", Context.MODE_PRIVATE).edit().putBoolean("quick_mark", enabled).apply()
+        session.update { it.copy(quickMark = enabled) }
+    }
 
     fun onProjectionAccepted(resultCode: Int, data: Intent) {
         session.resetForNewSession()
@@ -56,24 +75,10 @@ class SpikeViewModel @Inject constructor(
 
     fun canDrawOverlays(): Boolean = Settings.canDrawOverlays(context)
 
-    fun openClip(path: String): Intent? {
-        val file = File(path)
-        if (!file.exists()) {
-            session.setError("clip not found: ${file.name}")
-            return null
-        }
-        val uri = FileProvider.getUriForFile(
-            context,
-            "${context.packageName}.fileprovider",
-            file,
-        )
-        return Intent(Intent.ACTION_VIEW)
-            .setDataAndType(uri, "video/mp4")
-            .addFlags(Intent.FLAG_GRANT_READ_URI_PERMISSION)
-    }
+    fun openClip(path: String): Intent? = SpikeIntents.viewClip(context, path)
 
     fun needsNotificationPermission(): Boolean {
-        return Build.VERSION.SDK_INT >= 33
+        return Build.VERSION.SDK_INT >= 33 && context.checkSelfPermission(android.Manifest.permission.POST_NOTIFICATIONS) != android.content.pm.PackageManager.PERMISSION_GRANTED
     }
 
     private fun send(action: String) {

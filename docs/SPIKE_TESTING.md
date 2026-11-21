@@ -1,19 +1,19 @@
 # T-010 — Hướng dẫn kiểm thử trên thiết bị
 
-Spike này **chưa được chạy trên OnePlus Ace 5**. Không điền kết quả giả. Sau khi chạy trên máy thật, chép số liệu vào bảng mục B của `docs/16_TECHNICAL_DECISIONS.md` (cả bản `docs/16` và `docs/specs/BugSnapAI/docs/16`).
+Người dùng đã xác nhận ghi được video ở bản 0.1.0-t010. Checklist V1–V9 trên OnePlus Ace 5 **chưa được nghiệm thu đầy đủ**. Không điền kết quả giả. Sau khi chạy trên máy thật, chép số liệu vào bảng mục B của `docs/16_TECHNICAL_DECISIONS.md` (cả bản `docs/16` và `docs/specs/BugSnapAI/docs/16`).
 
 ## 1. Cài đặt
 
-Trên máy phát triển, nhánh `spike/capture`:
+Trên máy phát triển, nhánh `dev`:
 
 ```bash
 ./gradlew installDebug
 # hoặc adb install -r app/build/outputs/apk/debug/app-debug.apk
 ```
 
-Phiên bản: `0.1.0-t010`. Thiết bị chính: OnePlus Ace 5 / OxygenOS 16 (Android 16).
+Phiên bản giao diện phản hồi mới: `0.1.1-t010`. Thiết bị chính: OnePlus Ace 5 / OxygenOS 16 (Android 16).
 
-Khi mở app, màn hình đầu là **T-010 Spike Capture**. Cấp quyền thông báo nếu hệ thống hỏi. Nên cấp quyền overlay (nút trên màn hình) trước khi làm V2/V3.
+Khi mở app, màn hình đầu là **BugSnap AI / Sẵn sàng quay thử**. Cấp quyền thông báo nếu hệ thống hỏi. Nên cấp quyền overlay (nút trên màn hình) trước khi làm V2/V3.
 
 ## 2. Logcat và chỉ số
 

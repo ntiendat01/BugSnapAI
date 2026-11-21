@@ -5,6 +5,7 @@ import kotlinx.coroutines.flow.StateFlow
 import kotlinx.coroutines.flow.asStateFlow
 import kotlinx.coroutines.flow.update
 import java.util.concurrent.atomic.AtomicLong
+import java.util.UUID
 import javax.inject.Inject
 import javax.inject.Singleton
 
@@ -23,6 +24,9 @@ data class SpikeClipInfo(
     val actualPreRollMs: Long,
     val actualPostRollMs: Long,
     val latencyMs: Long,
+    val number: Int = 1,
+    val imageCount: Int = 2,
+    val savedAtMs: Long = 0,
 )
 
 data class SpikeUiState(
@@ -47,6 +51,10 @@ data class SpikeUiState(
     val recordingElapsedMs: Long = 0,
     val thermalStatus: Int? = null,
     val batteryPct: Int? = null,
+    val markers: List<SpikeMarker> = emptyList(),
+    val quickMark: Boolean = false,
+    val nowMs: Long = 0,
+    val appVisible: Boolean = false,
 )
 
 @Singleton
@@ -55,14 +63,26 @@ class SpikeSession @Inject constructor() {
     val state: StateFlow<SpikeUiState> = _state.asStateFlow()
     private val markSequence = AtomicLong(0)
 
-    fun nextMarkerId(): String = "m${markSequence.incrementAndGet()}"
+    fun nextMarkerId(): String = UUID.randomUUID().toString()
+
+    fun acceptMarker(id: String, nowMs: Long) {
+        val marker = SpikeMarker(id, markSequence.incrementAndGet().toInt(), nowMs, nowMs + 5_000, acceptedInApp = state.value.appVisible)
+        update { it.copy(markers = it.markers + marker, lastError = null, nowMs = nowMs) }
+    }
+
+    fun markerStage(id: String, stage: MarkerStage, error: String? = null) {
+        update { state ->
+            val markers = state.markers.map { if (it.id == id) it.copy(stage = stage, error = error) else it }
+            state.copy(markers = markers, exportingCount = markers.count { it.pending })
+        }
+    }
 
     fun update(transform: (SpikeUiState) -> SpikeUiState) {
         _state.update(transform)
     }
 
     fun setPhase(phase: SpikePhase, message: String? = null) {
-        update { it.copy(phase = phase, message = message, lastError = if (phase == SpikePhase.Idle) it.lastError else it.lastError) }
+        update { it.copy(phase = phase, message = message) }
     }
 
     fun setError(message: String) {
@@ -75,14 +95,13 @@ class SpikeSession @Inject constructor() {
             it.copy(
                 lastClip = info,
                 lastMarkLatencyMs = info.latencyMs,
-                clips = (listOf(info) + it.clips).take(20),
-                exportingCount = (it.exportingCount - 1).coerceAtLeast(0),
+                clips = (listOf(info) + it.clips.filterNot { clip -> clip.id == info.id }).sortedByDescending { clip -> clip.savedAtMs },
             )
         }
     }
 
     fun resetForNewSession() {
         markSequence.set(0)
-        _state.value = SpikeUiState(phase = SpikePhase.Starting)
+        update { it.copy(phase = SpikePhase.Starting, markers = emptyList(), lastError = null, lastTokenReuseResult = null) }
     }
 }

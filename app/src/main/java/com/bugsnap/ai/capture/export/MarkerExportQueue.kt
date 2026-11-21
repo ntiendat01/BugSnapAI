@@ -20,6 +20,7 @@ class MarkerExportQueue(
     private val retryLimit: Int = DEFAULT_RETRY_LIMIT,
     private val onResult: (ExportResult) -> Unit,
     executor: ExecutorService? = null,
+    private val onStarted: (String) -> Unit = {},
 ) {
     private val lock = ReentrantLock()
     private val waiting = ArrayDeque<ClipSnapshot>()
@@ -66,6 +67,7 @@ class MarkerExportQueue(
     }
 
     private fun runExport(snapshot: ClipSnapshot) {
+        onStarted(snapshot.id)
         var attempt = 0
         var last: ExportResult
         while (true) {

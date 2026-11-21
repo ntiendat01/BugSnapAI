@@ -1,0 +1,330 @@
+<!doctype html>
+<html lang="vi">
+<head>
+  <meta charset="utf-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1">
+  <title>BugSnap AI · Thiết kế phản hồi Mark Bug</title>
+  <style>
+    :root {
+      color-scheme: dark;
+      --background: #0b1220;
+      --surface: #111b2e;
+      --raised: #1a2740;
+      --primary: #22d3ee;
+      --on-primary: #04222a;
+      --text: #e6edf7;
+      --muted: #93a4bd;
+      --success: #34d399;
+      --warning: #fbbf24;
+      --error: #f87171;
+      --line: #33465e;
+    }
+    * { box-sizing: border-box; }
+    body { margin: 0; background: #080e18; color: var(--text); font: 16px/1.5 system-ui, sans-serif; }
+    button, select, input { font: inherit; }
+    button, select { min-height: 48px; border-radius: 12px; border: 1px solid var(--line); background: var(--raised); color: var(--text); padding: 10px 16px; cursor: pointer; }
+    button:hover { filter: brightness(1.12); }
+    button:active { filter: brightness(.88); }
+    button:disabled { opacity: .45; cursor: default; }
+    :focus-visible { outline: 3px solid var(--primary); outline-offset: 3px; }
+    a { color: var(--primary); }
+    h1, h2, h3, p { margin: 0; }
+    h1 { font-size: clamp(26px, 3vw, 40px); font-weight: 650; letter-spacing: -.035em; margin: 10px 0; }
+    h2 { font-size: 16px; font-weight: 600; }
+    h3 { font-size: 24px; line-height: 1.25; letter-spacing: -.02em; }
+    small, .small { font-size: 14px; }
+    .muted { color: var(--muted); }
+    .eyebrow { color: var(--primary); font-size: 13px; letter-spacing: .14em; text-transform: uppercase; }
+    .page { max-width: 1344px; margin: auto; padding: 40px 32px; }
+    .intro { max-width: 800px; }
+    .toolbar { display: flex; gap: 12px 24px; align-items: center; flex-wrap: wrap; padding: 20px 0 24px; margin: 16px 0 28px; border-bottom: 1px solid var(--line); }
+    .toolbar label { display: flex; align-items: center; gap: 8px; min-height: 48px; }
+    .toolbar input { accent-color: var(--primary); width: 22px; height: 22px; }
+    .grid { display: grid; grid-template-columns: minmax(0, 1fr) minmax(0, 1fr) minmax(260px, .86fr); gap: 28px; align-items: start; }
+    .surface-caption { margin-bottom: 16px; min-height: 52px; }
+    .surface-caption p { color: var(--muted); font-size: 14px; margin-top: 4px; }
+    .phone { width: 100%; max-width: 390px; min-height: 748px; background: var(--background); border: 1px solid var(--line); border-radius: 28px; overflow: hidden; position: relative; box-shadow: 0 20px 60px #0004; }
+    .system-bar { height: 40px; display: flex; align-items: center; justify-content: space-between; padding: 0 24px; font-size: 12px; font-weight: 650; }
+    .battery { width: 20px; height: 10px; border: 1px solid currentColor; border-radius: 2px; position: relative; }
+    .battery:after { content: ''; position: absolute; inset: 2px; background: currentColor; }
+    .appbar { display: flex; align-items: center; justify-content: space-between; gap: 8px; padding: 8px 20px 16px; }
+    .brand { font-size: 20px; font-weight: 650; letter-spacing: -.02em; }
+    .text-button { border: 0; color: var(--primary); background: transparent; padding: 8px; }
+    .content { padding: 8px 20px 24px; display: grid; gap: 20px; }
+    .status { display: flex; align-items: center; gap: 8px; font-size: 14px; color: var(--primary); }
+    .status:before { content: ''; width: 8px; height: 8px; border-radius: 50%; background: currentColor; }
+    .timer { font-size: 40px; font-weight: 500; font-variant-numeric: tabular-nums; letter-spacing: -.04em; }
+    .card { background: var(--surface); border: 1px solid var(--line); border-radius: 16px; padding: 16px; }
+    .card p + p { margin-top: 6px; }
+    .progress { height: 4px; background: var(--line); border-radius: 4px; margin: 12px 0 8px; overflow: hidden; }
+    .progress span { display: block; height: 100%; width: 100%; background: var(--primary); }
+    .primary { background: var(--primary); color: var(--on-primary); border-color: var(--primary); font-weight: 650; border-radius: 28px; }
+    .full { width: 100%; min-height: 56px; }
+    .actions { display: grid; gap: 8px; }
+    .list-title { display: flex; justify-content: space-between; align-items: center; gap: 8px; margin-bottom: 12px; }
+    .clip { display: grid; gap: 6px; border-top: 1px solid var(--line); padding: 12px 0; }
+    .clip:first-child { border-top: 0; padding-top: 0; }
+    .clip button { width: 100%; margin-top: 6px; }
+    .home-indicator { width: 100px; height: 4px; background: currentColor; opacity: .6; border-radius: 3px; margin: 12px auto; }
+    details summary { min-height: 48px; cursor: pointer; display: list-item; padding-top: 12px; color: var(--muted); font-size: 14px; }
+    .aut { background: #f0f2f6; color: #1a2940; }
+    .aut .appbar { border-bottom: 1px solid #d6dfe9; }
+    .aut-content { padding: 24px 20px; }
+    .aut-content p { color: #4a5f78; margin-top: 8px; }
+    .test-row { border-top: 1px solid #d6dfe9; padding: 20px 0; display: flex; gap: 12px; align-items: center; }
+    .test-row:first-of-type { margin-top: 28px; }
+    .test-check { height: 20px; width: 20px; border: 1px solid #708399; border-radius: 5px; flex-shrink: 0; }
+    .test-row small { display: block; color: #4a5f78; margin-top: 4px; }
+    .aut-label { font-size: 12px; color: #4a5f78; position: absolute; bottom: 28px; left: 20px; }
+    .overlay { position: absolute; top: 300px; right: 16px; display: grid; justify-items: end; gap: 12px; max-width: calc(100% - 32px); color: var(--text); }
+    .bubble-row { display: flex; gap: 8px; align-items: center; }
+    .bubble { min-height: 56px; min-width: 56px; border-radius: 28px; background: var(--primary); border: 1px solid var(--on-primary); color: var(--on-primary); font-weight: 650; display: flex; align-items: center; gap: 8px; justify-content: center; box-shadow: 0 4px 16px #0003; }
+    .target { display: inline-block; width: 20px; height: 20px; border: 2px solid currentColor; border-radius: 50%; position: relative; flex-shrink: 0; }
+    .target:after { content: ''; position: absolute; width: 6px; height: 6px; background: currentColor; border-radius: 50%; inset: 5px; }
+    .menu-button { border-radius: 50%; padding: 0; min-width: 48px; }
+    .feedback { width: min(264px, 100%); border-radius: 16px; padding: 16px; background: var(--surface); border: 1px solid var(--line); box-shadow: 0 8px 32px #0003; }
+    .feedback p + p { margin-top: 4px; }
+    .feedback button { margin-top: 12px; width: 100%; }
+    .feedback-title { font-weight: 600; display: flex; align-items: center; gap: 8px; }
+    .good { color: var(--success); }
+    .warn { color: var(--warning); }
+    .bad { color: var(--error); }
+    .check { display: inline-block; width: 16px; height: 9px; border-bottom: 2px solid currentColor; border-left: 2px solid currentColor; transform: rotate(-45deg); margin: 0 3px 4px; }
+    .notice-area { background: var(--surface); border-radius: 24px; border: 1px solid var(--line); padding: 20px; display: grid; gap: 16px; }
+    .notice { padding: 16px; background: var(--raised); border-radius: 16px; }
+    .notice-source { color: var(--muted); font-size: 12px; margin-bottom: 12px; }
+    .notice p { margin-top: 6px; }
+    .notice-actions { display: flex; flex-wrap: wrap; gap: 8px; margin-top: 12px; }
+    .notice-actions button { padding-left: 8px; padding-right: 8px; }
+    .explainer { font-size: 14px; color: var(--muted); margin-top: 20px; }
+    .legend { display: grid; gap: 12px; padding-top: 24px; margin-top: 24px; border-top: 1px solid var(--line); }
+    .legend p { font-size: 14px; }
+    .live { border-left: 3px solid var(--primary); padding-left: 12px; margin-top: 24px; font-size: 14px; }
+    dialog { color: var(--text); background: var(--surface); border: 1px solid var(--line); border-radius: 24px; padding: 24px; width: min(480px, calc(100% - 32px)); }
+    dialog::backdrop { background: #000b; }
+    dialog p { margin: 16px 0; }
+    dialog button { margin-top: 8px; }
+    @media (max-width: 1100px) { .grid { grid-template-columns: repeat(2, minmax(0, 1fr)); } .notification-column { grid-column: 1 / -1; } .notice-area { grid-template-columns: repeat(2, minmax(0, 1fr)); } }
+    @media (max-width: 680px) { .page { padding: 24px 16px; } .grid, .notice-area { grid-template-columns: minmax(0, 1fr); } .phone { max-width: none; } .notification-column { grid-column: auto; } .toolbar { align-items: stretch; } .toolbar label, .toolbar select { width: 100%; } }
+    @media (prefers-reduced-motion: no-preference) { button { transition: filter 150ms; } }
+  </style>
+</head>
+<body>
+  <main class="page">
+    <header class="intro">
+      <p class="eyebrow">BugSnap AI · Bản thiết kế tương tác</p>
+      <h1>Mỗi lần Mark Bug đều có phản hồi.</h1>
+      <p class="muted">Thử luồng Bắt đầu quay → Mark Bug → Xem clip. Các bề mặt bên dưới dùng chung trạng thái mô phỏng. Video, thông báo và rung trên điện thoại sẽ được kiểm chứng khi triển khai Android.</p>
+    </header>
+    <div class="toolbar" aria-label="Điều khiển bản thiết kế">
+      <label>Tình huống
+        <select id="scenario">
+          <option value="idle">Chuẩn bị quay</option>
+          <option value="recording">Đang quay</option>
+          <option value="collecting">Vừa đánh dấu</option>
+          <option value="exporting">Đang lưu clip</option>
+          <option value="saved">Đã lưu clip</option>
+          <option value="multiple">Nhiều marker</option>
+          <option value="failed">Lưu lỗi</option>
+          <option value="lost">Mất quyền quay</option>
+        </select>
+      </label>
+      <label><input id="quick" type="checkbox">Bật Mark nhanh</label>
+      <label><input id="overlayEnabled" type="checkbox" checked>Có quyền bong bóng</label>
+      <button id="reset">Làm lại</button>
+    </div>
+    <div class="grid">
+      <section>
+        <div class="surface-caption"><h2>Trong BugSnap</h2><p>Trạng thái rõ, clip vừa lưu có thể mở ngay.</p></div>
+        <div class="phone">
+          <div class="system-bar" aria-hidden="true"><span>09:41</span><span class="battery"></span></div>
+          <div class="appbar"><span class="brand">BugSnap AI</span><button class="text-button" data-action="help">Trợ giúp</button></div>
+          <div class="content" id="appContent"></div>
+          <div class="home-indicator" aria-hidden="true"></div>
+        </div>
+      </section>
+      <section>
+        <div class="surface-caption"><h2>Khi đang test app khác</h2><p>Bong bóng và kết quả neo cùng một vị trí.</p></div>
+        <div class="phone aut">
+          <div class="system-bar" aria-hidden="true"><span>09:41</span><span class="battery"></span></div>
+          <div class="appbar"><span class="brand">Danh sách kiểm thử</span></div>
+          <div class="aut-content">
+            <h3>Kiểm tra thanh toán</h3>
+            <p>Phiên kiểm thử hôm nay</p>
+            <div class="test-row"><span class="test-check" aria-hidden="true"></span><div>Chọn sản phẩm<small>Giá và số lượng chính xác</small></div></div>
+            <div class="test-row"><span class="test-check" aria-hidden="true"></span><div>Áp dụng ưu đãi<small>Kiểm tra tổng tiền sau giảm</small></div></div>
+            <div class="test-row"><span class="test-check" aria-hidden="true"></span><div>Xác nhận đơn hàng<small>Hiển thị kết quả thanh toán</small></div></div>
+          </div>
+          <p class="aut-label">Ứng dụng mẫu dùng làm nền minh họa</p>
+          <div id="overlay" class="overlay"></div>
+        </div>
+      </section>
+      <section class="notification-column">
+        <div class="surface-caption"><h2>Nội dung thông báo</h2><p>Đọc kết quả từ khay thông báo khi ở ngoài app.</p></div>
+        <div class="notice-area" id="notices"></div>
+        <div class="legend">
+          <p><strong class="warn">Đã nhận thao tác</strong><br><span class="muted">Xác nhận ngay, sau đó hiển thị khoảng ghi thêm.</span></p>
+          <p><strong class="good">Đã lưu clip</strong><br><span class="muted">Chỉ hiện khi có kết quả lưu hoàn tất.</span></p>
+          <p class="muted">Mark nhanh mặc định tắt. Chạm bong bóng để mở điều khiển, sau đó bấm Mark Bug. Bật tùy chọn phía trên để thử đánh dấu một chạm.</p>
+        </div>
+      </section>
+    </div>
+    <p id="announcement" class="live" role="status" aria-live="polite">Sẵn sàng thử bản thiết kế.</p>
+    <p class="explainer">Mô phỏng ghi thêm 5 giây và xuất 1,4 giây để duyệt hành vi. Bạn có thể Mark nhiều lần khi các clip trước đang xử lý. Các tình huống chọn sẵn giữ nguyên trạng thái để xem; thẻ hoàn thành được giữ mở để đọc. Nút Xem clip mở thông tin minh họa. <a href="../17_CAPTURE_FEEDBACK_UX.md">Đọc đặc tả và tiêu chí nghiệm thu</a>.</p>
+  </main>
+  <dialog id="detail" aria-labelledby="detailTitle">
+    <h3 id="detailTitle"></h3><p id="detailBody"></p><button id="closeDetail" class="primary">Đóng</button>
+  </dialog>
+  <script>
+    const appContent = document.querySelector('#appContent');
+    const overlay = document.querySelector('#overlay');
+    const notices = document.querySelector('#notices');
+    const scenario = document.querySelector('#scenario');
+    const quick = document.querySelector('#quick');
+    const overlayEnabled = document.querySelector('#overlayEnabled');
+    const announcement = document.querySelector('#announcement');
+    const detail = document.querySelector('#detail');
+    let session = 'idle';
+    let jobs = [];
+    let panelOpen = false;
+    let nextId = 1;
+    let simulated = false;
+    let startedAt = 0;
+    let previousRender = '';
+    const labels = { collecting: 'Ghi thêm', queued: 'Đang chờ lưu', exporting: 'Đang lưu clip', saved: 'Đã lưu clip', failed: 'Lưu thất bại' };
+
+    function announce(message) { announcement.textContent = message; }
+    function showDetail(title, body) {
+      document.querySelector('#detailTitle').textContent = title;
+      document.querySelector('#detailBody').textContent = body;
+      detail.showModal();
+    }
+    function pendingJobs() { return jobs.filter(job => ['collecting', 'queued', 'exporting'].includes(job.stage)); }
+    function latestJob() { return jobs.at(-1); }
+    function button(label, action, style = '', id = '') {
+      return `<button class="${style}" data-action="${action}" ${id ? `data-id="${id}"` : ''}>${label}</button>`;
+    }
+    function remaining(job) {
+      if (!simulated) return job.stage === 'collecting' ? 5 : 0;
+      return Math.max(0, Math.ceil((job.deadline - Date.now()) / 1000));
+    }
+    function feedback(job) {
+      const pending = pendingJobs().length;
+      if (!job) return '<p class="feedback-title">Đã bắt đầu quay</p><p class="small muted">Dùng Mark Bug khi gặp lỗi.</p>';
+      if (job.stage === 'collecting') return `<p class="feedback-title warn">Đã đánh dấu #${job.id}</p><p class="small">Ghi thêm ${remaining(job)} giây</p><p class="small muted">${pending} clip đang xử lý</p>`;
+      if (job.stage === 'queued') return `<p class="feedback-title warn">Clip #${job.id} đang chờ lưu</p><p class="small muted">${pending} clip đang xử lý</p>`;
+      if (job.stage === 'exporting') return `<p class="feedback-title warn">Đang lưu clip #${job.id}…</p><p class="small muted">${pending} clip đang xử lý</p>`;
+      if (job.stage === 'failed') return `<p class="feedback-title bad">Clip #${job.id} lưu thất bại</p><p class="small">Bộ nhớ đầy</p>${button('Xem lỗi', 'error', '', job.id)}`;
+      return `<p class="feedback-title good"><span class="check" aria-hidden="true"></span>Đã lưu clip #${job.id}</p><p class="small">35 giây · 2 ảnh</p>${button('Xem clip', 'view', '', job.id)}`;
+    }
+    function render(force = false) {
+      const snapshot = JSON.stringify([session, jobs.map(job => [job.id, job.stage, remaining(job)]), panelOpen, quick.checked, overlayEnabled.checked]);
+      if (!force && snapshot === previousRender) return;
+      previousRender = snapshot;
+      const focused = document.activeElement;
+      const focusAction = focused?.dataset?.action;
+      const focusId = focused?.dataset?.id;
+      const focusSurface = focused?.closest('#overlay, #appContent, #notices');
+      const job = latestJob();
+      const saved = jobs.filter(item => item.stage === 'saved').length;
+      const pending = pendingJobs().length;
+      const active = session === 'recording';
+      const heading = active ? 'Đang quay' : session === 'starting' ? 'Đang chuẩn bị quay…' : session === 'lost' ? 'Quay đã dừng' : session === 'stopped' ? 'Đã dừng quay' : 'Sẵn sàng quay thử';
+      const clock = active ? '<p class="timer">02:14</p>' : '';
+      const summary = active ? 'Đã giữ 30 / 30 giây gần nhất' : session === 'lost' ? 'Cần cấp lại quyền quay màn hình.' : session === 'stopped' ? `${pending ? `Đang hoàn tất ${pending} clip` : `Đã lưu ${saved} clip`}` : 'Giữ tối đa 30 giây gần nhất. Bấm Mark Bug khi gặp lỗi để lưu clip.';
+      const startButton = button(session === 'lost' ? 'Cấp lại quyền quay' : 'Bắt đầu quay', 'start', 'primary full');
+      const actions = active ? `${button('Mark Bug', 'mark', 'primary full')}${button('Dừng quay', 'stop', 'text-button full')}` : session === 'starting' ? '<button class="full" disabled>Đang chuẩn bị…</button>' : pending ? '<button class="full" disabled>Đang hoàn tất clip…</button>' : startButton;
+      const clipRows = jobs.slice().reverse().map(item => `<div class="clip"><strong>Clip #${item.id}</strong><span class="small ${item.stage === 'saved' ? 'good' : item.stage === 'failed' ? 'bad' : 'warn'}">${labels[item.stage]}${item.stage === 'collecting' ? ` · ${remaining(item)} giây` : ''}</span>${item.stage === 'saved' ? button('Xem clip · 35 giây', 'view', '', item.id) : item.stage === 'failed' ? button('Xem lỗi', 'error', '', item.id) : ''}</div>`).join('');
+      appContent.innerHTML = `<div><p class="status">${heading}</p>${clock}<p class="muted small" style="margin-top:8px">${summary}</p>${active ? '<div class="progress"><span></span></div>' : ''}</div>${job ? `<div class="card">${feedback(job)}<p class="small muted" style="margin-top:8px">Lưu trong BugSnap · Clip của phiên</p></div>` : '<div class="card"><p>30 giây trước · 5 giây sau</p><p class="muted small">Chuyển sang app cần test. Đánh dấu lỗi bằng bong bóng hoặc thông báo BugSnap.</p></div>'}<div class="actions">${actions}</div><div><div class="list-title"><h2>Clip của phiên</h2><span class="small muted">${saved} đã lưu</span></div>${clipRows || '<p class="small muted">Clip xuất hiện ở đây sau khi bạn đánh dấu.</p>'}</div><details><summary>Kiểm thử kỹ thuật</summary><p class="small muted">RAM, FPS, keyframe và các bài V1–V9 được mở ở đây trong APK triển khai.</p></details>`;
+      const control = panelOpen ? `<div class="feedback"><div class="list-title"><strong>Điều khiển</strong>${button('Đóng', 'panel', 'text-button')}</div>${button('Mark Bug', 'mark', 'primary full')}${button('Mở BugSnap', 'open', 'text-button full')}${button('Dừng quay', 'stop', 'text-button full')}</div>` : '';
+      const bubble = active ? `<div class="bubble-row">${button(`<span class="target" aria-hidden="true"></span>${quick.checked ? 'Mark Bug' : '<span class="small">Điều khiển</span>'}`, quick.checked ? 'mark' : 'panel', 'bubble')}${quick.checked ? button('···', 'panel', 'menu-button') : ''}</div>` : '';
+      overlay.innerHTML = overlayEnabled.checked && (active || session === 'lost' || pending) ? `${session === 'lost' ? '<div class="feedback"><p class="feedback-title bad">Quay đã dừng</p><p class="small">Cần cấp lại quyền quay</p>' + button('Mở BugSnap', 'open', '') + '</div>' : ''}${job || active ? `<div class="feedback">${feedback(job)}</div>` : ''}${control}${bubble}` : '';
+      const captureTitle = active ? 'BugSnap đang quay' : session === 'lost' ? 'Quay đã dừng' : session === 'starting' ? 'Đang chuẩn bị quay' : session === 'stopped' ? 'Đã dừng quay' : 'Thông báo khi bắt đầu quay';
+      notices.innerHTML = `<div class="notice"><div class="notice-source">BugSnap AI · Điều khiển phiên</div><strong>${captureTitle}</strong><p class="small muted">${active && pending ? `${pending} clip đang xử lý · ${saved} đã lưu` : summary}</p><div class="notice-actions">${active ? button('Mark Bug', 'mark', 'text-button') + button('Dừng', 'stop', 'text-button') : session === 'lost' ? button('Mở BugSnap', 'open', 'text-button') : ''}</div></div>${job ? `<div class="notice"><div class="notice-source">BugSnap AI · Kết quả clip</div>${feedback(job)}</div>` : '<p class="small muted">Kết quả lưu clip sẽ hiện ở đây.</p>'}`;
+      const menuButton = overlay.querySelector('.menu-button');
+      if (menuButton) menuButton.setAttribute('aria-label', 'Mở điều khiển BugSnap');
+      if (focusAction) {
+        const candidates = [...(focusSurface || document).querySelectorAll('[data-action]')];
+        const target = candidates.find(item => item.dataset.action === focusAction && item.dataset.id === focusId);
+        target?.focus({ preventScroll: true });
+      }
+    }
+    function preset(value) {
+      jobs = []; nextId = 1; panelOpen = false; simulated = false;
+      session = value === 'idle' ? 'idle' : value === 'lost' ? 'lost' : 'recording';
+      const stages = value === 'multiple' ? ['saved', 'exporting', 'collecting'] : ['collecting', 'exporting', 'saved', 'failed'].includes(value) ? [value] : [];
+      stages.forEach(stage => jobs.push({ id: String(nextId++).padStart(2, '0'), stage, deadline: Date.now() + 5000 }));
+      announce(`Đang xem tình huống ${scenario.selectedOptions[0].textContent.toLowerCase()}.`);
+      render(true);
+    }
+    function start() {
+      jobs = []; nextId = 1; session = 'starting'; startedAt = Date.now(); simulated = true;
+      announce('Mô phỏng đã đồng ý quyền quay. Đang chuẩn bị hình ảnh đầu tiên.'); render(true);
+    }
+    function mark() {
+      if (session !== 'recording') return;
+      const last = latestJob();
+      if (last?.acceptedAt && Date.now() - last.acceptedAt < 300) return;
+      if (!simulated) {
+        jobs.forEach(existing => {
+          existing.deadline = Date.now() + 5000;
+          if (existing.stage === 'exporting') existing.exportEnd = Date.now() + 1400;
+        });
+      }
+      const job = { id: String(nextId++).padStart(2, '0'), stage: 'collecting', acceptedAt: Date.now(), deadline: Date.now() + 5000 };
+      jobs.push(job); simulated = true; panelOpen = false;
+      announce(`Đã đánh dấu lỗi số ${job.id}. Ghi thêm 5 giây. Rung xác nhận ngắn được đề xuất cho Android.`); render(true);
+    }
+    document.addEventListener('click', event => {
+      const target = event.target.closest('[data-action]');
+      if (!target) return;
+      const action = target.dataset.action;
+      if (action === 'start') start();
+      if (action === 'mark') mark();
+      if (action === 'panel') { panelOpen = !panelOpen; render(true); }
+      if (action === 'open') { appContent.scrollIntoView({ block: 'start' }); announce('Mở BugSnap và giữ nguyên trạng thái phiên.'); }
+      if (action === 'view') showDetail(`Clip #${target.dataset.id}`, 'Video minh họa · 35 giây · 2 ảnh. Trong APK, thao tác này mở đúng clip đã lưu. Phiên quay tiếp tục theo trạng thái thực.');
+      if (action === 'error') showDetail(`Clip #${target.dataset.id} lưu thất bại`, 'Bộ nhớ đầy. Giải phóng dung lượng để quay tiếp. Các clip đã lưu vẫn có thể mở từ danh sách.');
+      if (action === 'help') showDetail('Cách lưu một clip', 'Bắt đầu quay, chuyển sang app cần test. Chạm bong bóng rồi chọn Mark Bug, hoặc dùng nút trong thông báo. Chờ ghi thêm 5 giây và lưu xong. Bấm Xem clip để xem kết quả.');
+      if (action === 'stop') showDetail('Dừng quay?', 'Bấm Dừng quay bên dưới để mô phỏng chốt clip đang xử lý với phần dữ liệu đã có.');
+      if (action === 'stop') {
+        const confirm = document.createElement('button');
+        confirm.className = 'full'; confirm.textContent = 'Dừng quay'; confirm.style.color = 'var(--error)';
+        confirm.onclick = () => {
+          session = 'stopped';
+          simulated = true;
+          jobs.forEach(job => {
+            if (job.stage === 'collecting') job.deadline = Date.now();
+            if (job.stage === 'exporting' && !job.exportEnd) job.exportEnd = Date.now() + 1400;
+          });
+          detail.close();
+          announce('Đã dừng quay. Đang hoàn tất các clip đã đánh dấu.');
+          render(true);
+          confirm.remove();
+        };
+        detail.append(confirm);
+      }
+    });
+    document.querySelector('#closeDetail').onclick = () => detail.close();
+    detail.addEventListener('close', () => detail.querySelectorAll('button.full').forEach(item => item.remove()));
+    scenario.onchange = () => preset(scenario.value);
+    quick.onchange = () => render(true);
+    overlayEnabled.onchange = () => { announce(overlayEnabled.checked ? 'Đã bật bề mặt bong bóng trong mô phỏng.' : 'Dùng Mark Bug và xem kết quả trong khay thông báo phía bên phải.'); render(true); };
+    document.querySelector('#reset').onclick = () => { scenario.value = 'idle'; preset('idle'); };
+    setInterval(() => {
+      if (!simulated) return;
+      if (session === 'starting' && Date.now() - startedAt >= 900) { session = 'recording'; announce('Đã bắt đầu quay. Bạn có thể chuyển sang app cần test.'); }
+      for (const job of jobs) {
+        if (job.stage === 'collecting' && Date.now() >= job.deadline) { job.stage = 'queued'; }
+      }
+      for (const job of jobs) {
+        if (job.stage === 'exporting' && Date.now() >= job.exportEnd) { job.stage = 'saved'; announce(`Đã lưu clip số ${job.id}. Có thể mở trong Clip của phiên.`); }
+      }
+      const capacity = 3 - jobs.filter(job => job.stage === 'exporting').length;
+      jobs.filter(job => job.stage === 'queued').slice(0, capacity).forEach(job => { job.stage = 'exporting'; job.exportEnd = Date.now() + 1400; announce(`Đang lưu clip số ${job.id}.`); });
+      render();
+    }, 200);
+    preset('idle');
+  </script>
+</body>
+</html>

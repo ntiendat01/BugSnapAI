@@ -54,7 +54,7 @@ Quy ước trạng thái: **Empty / Loading / Error / Permission** có cho từn
 ### 3.4 Floating Bubble Controller
 - Trạng thái: **Thu nhỏ** (chấm ~48 dp, alpha 0.6, bám cạnh) và **Mở rộng** (cột/ hàng 4 nút: Mark Bug, Note, Pause/Resume, Mở app; Stop cần nhấn giữ hoặc xác nhận).
 - Hành vi: kéo thả; thả gần cạnh ⇒ bám; chạm ⇒ mở rộng, tự thu sau 3 s; **chạm một lần vào Mark Bug trong chế độ thu nhỏ** là cấu hình tùy chọn "Mark nhanh" (chạm đôi để mở rộng) — mặc định tắt để tránh chạm nhầm.
-- Phản hồi Mark: rung ngắn + tick xanh 400 ms; hộp Quick Note không chiếm bàn phím trừ khi người dùng mở.
+- Phản hồi Mark: xác nhận nhận thao tác, countdown phần ghi thêm, đang lưu, kết quả đã lưu hoặc lỗi theo `17_CAPTURE_FEEDBACK_UX.md`. Rung xác nhận ngắn tại bề mặt trực tiếp. Nút Xem clip mở đúng marker sau khi lưu hoàn tất.
 - Không che AUT: kích thước nhỏ, vị trí nhớ theo hướng màn hình, tránh vùng gesture hệ thống, tự mờ.
 - Overlay bị từ chối: thông báo có nút Mark Bug/Pause/Stop + Quick Settings tile "Mark Bug".
 - Ẩn khi: phiên PAUSED do người dùng (hiện chấm vàng), phiên kết thúc.
@@ -88,3 +88,7 @@ Nhãn `contentDescription` cho bong bóng, hỗ trợ cỡ chữ lớn, không c
 
 ## 6. Hướng dẫn pin OxygenOS (nội dung màn onboarding)
 Các bước (tên mục có thể khác theo bản OS, **cần xác minh trên Ace 5**): cho phép hoạt động nền không giới hạn, bật tự khởi chạy nếu có, khóa app trong màn hình đa nhiệm, tắt "tối ưu hóa pin" cho BugSnap AI. Nút mở đúng màn hình cài đặt khi có thể.
+
+## 7. Thiết kế bổ sung cho phản hồi quay và Mark Bug
+
+Đề xuất ngày 21/11/2026 chi tiết hóa các mốc nhận thao tác, ghi thêm, đang lưu, đã lưu và lỗi, cùng thiết kế overlay/notification/màn trong app. Xem [17 — Capture feedback UX](../../../17_CAPTURE_FEEDBACK_UX.md) và [bản phác thảo tương tác](../../../design/capture-feedback.html). Bản spike 0.1.1-t010 đã triển khai luồng phản hồi chính. Bằng chứng và phạm vi kiểm chứng nằm trong [nhật ký triển khai](../../../UI_UX_IMPLEMENTATION.md).

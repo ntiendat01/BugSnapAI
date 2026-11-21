@@ -20,11 +20,12 @@
 | ADR-15 | Thêm **Phase 0 spike** | Giảm rủi ro nền tảng sớm | Chậm hiển thị tiến độ UI |
 | ADR-16 | Trần rolling buffer / pre-roll = **30 s** (tùy chọn 15/30, mặc định 30; bỏ 60 s) | Chủ dự án giới hạn độ dài video giữ trước Mark Bug | Clip xuất ra = pre-roll + post-roll nên có thể dài hơn 30 s (tối đa 30+10 = 40 s) |
 | ADR-17 | Khai báo trực tiếp `kotlinx-coroutines` 1.11.0 (core/android/test) | Đã có trong stack `05`; cần dependency trực tiếp cho qualifier dispatcher (`T-002`) | — |
+| ADR-18 | Phản hồi T-010 dùng trạng thái theo từng marker cho Compose, overlay và notification; clip có UUID và index JSON atomic trong thư mục riêng | Nhận Mark, ghi thêm, xuất và kết quả cần theo cùng một ID; index phục vụ đọc lại clip sau khi mở app | Index JSON là bước nối cho spike; pipeline sản phẩm T-016 tiếp tục dùng Room. Xem tài liệu 17 và UI_UX_IMPLEMENTATION |
 
 ## B. Kết quả spike (điền sau `T-010`)
-Mã spike nằm trên nhánh `spike/capture` (commit T-010). **Chưa chạy trên OnePlus Ace 5 — không điền kết quả giả.** Quy trình từng bước, lệnh logcat và cách lấy clip: `docs/SPIKE_TESTING.md`.
+Mã spike hiện có trên nhánh `dev`. Người dùng đã xác nhận ghi được video ở bản 0.1.0-t010. **Checklist V1–V9 trên OnePlus Ace 5 chưa được nghiệm thu đầy đủ.** Quy trình từng bước, lệnh logcat và cách lấy clip: `docs/SPIKE_TESTING.md`.
 
-Ghi chú build hiện tại: `versionName 0.1.0-t010`, pre-roll tối đa 30 s, post-roll 5 s, encode cạnh dài 1280 / 30 fps / 4 Mbps / I-frame 1 s.
+Ghi chú build hiện tại: `versionName 0.1.1-t010`, pre-roll tối đa 30 s, post-roll 5 s, encode cạnh dài 1280 / 30 fps / 4 Mbps / I-frame 1 s.
 
 | # | Câu hỏi (`06` §9) | Kết quả | Ngày/Build/OS |
 |---|---|---|---|

@@ -28,7 +28,9 @@ import kotlinx.coroutines.delay
 import kotlinx.coroutines.isActive
 import kotlinx.coroutines.launch
 import java.io.File
-import java.util.concurrent.ConcurrentHashMap
+import com.bugsnap.ai.R
+import com.bugsnap.ai.capture.buffer.MarkResult
+import kotlinx.coroutines.withContext
 import javax.inject.Inject
 
 @AndroidEntryPoint
@@ -39,7 +41,10 @@ class SpikeCaptureService : Service() {
     private val scope = CoroutineScope(job + Dispatchers.Main.immediate)
     private val metrics = SpikeMetrics()
     private val buffer = RingBuffer()
-    private val markStartedAt = ConcurrentHashMap<String, Long>()
+    @Inject lateinit var exportFeedback: SpikeExportFeedback
+    private var lastMarkAtMs = -1_000L
+    private var finishing = false
+    private var finishJob: kotlinx.coroutines.Job? = null
 
     private lateinit var muxer: AndroidClipMuxer
     private lateinit var exportQueue: MarkerExportQueue
@@ -64,9 +69,25 @@ class SpikeCaptureService : Service() {
         exportQueue = MarkerExportQueue(
             exporter = muxer,
             outputRoot = ".",
-            onResult = { result -> handleExport(result) },
+            onResult = { result -> scope.launch { exportFeedback.complete(result); finishWhenReady() } },
+            onStarted = { id -> session.markerStage(id, MarkerStage.Exporting) },
         )
-        overlay = SpikeOverlay(this)
+        overlay = SpikeOverlay(this, onMark = { mark() }, onStop = { stopCapture("user") },
+            onQuickMark = { enabled -> session.update { it.copy(quickMark = enabled) } })
+        scope.launch {
+            session.state.collect { state ->
+                overlay.render(state)
+                if (projection != null || state.markers.any { it.pending }) {
+                    SpikeNotifications.update(this@SpikeCaptureService, state)
+                }
+            }
+        }
+        scope.launch {
+            while (isActive) {
+                session.update { it.copy(nowMs = SystemClock.elapsedRealtime()) }
+                delay(250)
+            }
+        }
         SpikeLog.i("service created")
     }
 
@@ -84,6 +105,7 @@ class SpikeCaptureService : Service() {
     override fun onBind(intent: Intent?): IBinder? = null
 
     override fun onDestroy() {
+        overlay.dismiss()
         teardown("onDestroy")
         exportQueue.shutdown()
         scope.cancel()
@@ -91,6 +113,8 @@ class SpikeCaptureService : Service() {
     }
 
     private fun startCapture(intent: Intent) {
+        finishJob?.cancel()
+        finishing = false
         val resultCode = intent.getIntExtra(EXTRA_RESULT_CODE, 0)
         val data = intent.parcelableIntent(EXTRA_RESULT_DATA)
         if (data == null) {
@@ -149,11 +173,9 @@ class SpikeCaptureService : Service() {
             stopSelf()
             return
         }
-        overlay.show()
         listenToConfiguration()
         session.update {
             it.copy(
-                phase = SpikePhase.Recording,
                 message = getString(com.bugsnap.ai.R.string.spike_status_recording),
                 encodeWidth = encodeWidth,
                 encodeHeight = encodeHeight,
@@ -194,55 +216,62 @@ class SpikeCaptureService : Service() {
 
     private fun onSample(sample: EncodedSample) {
         val completed = buffer.append(sample)
-        completed.forEach { exportQueue.submit(it) }
-        if (completed.isNotEmpty()) {
-            session.update { it.copy(exportingCount = it.exportingCount + completed.size) }
+        if (sample.isKeyFrame && session.state.value.phase == SpikePhase.Starting) {
+            session.setPhase(SpikePhase.Recording)
         }
+        completed.forEach { submitClip(it) }
     }
 
-    fun mark() {
+    private fun submitClip(snapshot: com.bugsnap.ai.capture.buffer.ClipSnapshot) {
+        session.markerStage(snapshot.id, MarkerStage.Queued)
+        exportQueue.submit(snapshot)
+    }
+
+    fun mark(): Boolean {
+        val now = SystemClock.elapsedRealtime()
         if (session.state.value.phase != SpikePhase.Recording) {
-            SpikeLog.w("mark ignored: phase=${session.state.value.phase}")
-            return
+            session.setError(getString(R.string.marker_not_ready))
+            return false
         }
+        if (now - lastMarkAtMs < 300) return false
         val id = session.nextMarkerId()
-        markStartedAt[id] = SystemClock.elapsedRealtime()
         val result = buffer.mark(id)
-        SpikeLog.i("mark id=$id result=${result::class.java.simpleName} lastPts=${buffer.lastPts()}")
-        when (result) {
-            is com.bugsnap.ai.capture.buffer.MarkResult.Pending -> Unit
-            is com.bugsnap.ai.capture.buffer.MarkResult.Ready -> {
-                session.update { it.copy(exportingCount = it.exportingCount + 1) }
-                exportQueue.submit(result.snapshot)
-            }
-            is com.bugsnap.ai.capture.buffer.MarkResult.Rejected -> session.setError("mark rejected: ${result.reason}")
+        if (result is MarkResult.Rejected) {
+            session.setError(getString(R.string.marker_not_ready))
+            return false
         }
+        lastMarkAtMs = now
+        session.acceptMarker(id, now)
+        if (result is MarkResult.Ready) submitClip(result.snapshot)
+        return true
     }
 
     private fun stopCapture(reason: String) {
-        SpikeLog.i("stop requested reason=$reason")
         flushPending()
         teardown(reason)
-        session.setPhase(SpikePhase.Stopped, reason)
-        stopForeground(STOP_FOREGROUND_REMOVE)
-        stopSelf()
+        session.setPhase(SpikePhase.Stopped)
+        finishWhenReady()
     }
 
     private fun onProjectionStopped() {
         flushPending()
         teardown("projection-lost", stopProjection = false)
-        session.setPhase(SpikePhase.ProjectionLost, getString(com.bugsnap.ai.R.string.spike_status_projection_lost))
-        stopForeground(STOP_FOREGROUND_REMOVE)
-        stopSelf()
+        session.setPhase(SpikePhase.ProjectionLost)
+        finishWhenReady()
+    }
+
+    private fun finishWhenReady() {
+        if (projection != null || session.state.value.markers.any { it.pending } || finishing) return
+        finishing = true
+        finishJob = scope.launch {
+            delay(4_000)
+            stopForeground(STOP_FOREGROUND_REMOVE)
+            stopSelf()
+        }
     }
 
     private fun flushPending() {
-        val leftover = buffer.forceFinalizePending()
-        leftover.forEach { snapshot ->
-            session.update { it.copy(exportingCount = it.exportingCount + 1) }
-            exportQueue.submit(snapshot)
-        }
-        SpikeLog.i("flushed pending clips=${leftover.size}")
+        buffer.forceFinalizePending().forEach { submitClip(it) }
     }
 
     private fun reuseToken() {
@@ -301,7 +330,7 @@ class SpikeCaptureService : Service() {
 
     private suspend fun heartbeat() {
         var minute = 0
-        while (scope.isActive && session.state.value.phase == SpikePhase.Recording) {
+        while (scope.isActive && session.state.value.phase in setOf(SpikePhase.Starting, SpikePhase.Recording)) {
             val stats = buffer.stats()
             metrics.logRam(stats.ramBytes, label = "heartbeat")
             val thermal = thermalStatus()
@@ -333,46 +362,13 @@ class SpikeCaptureService : Service() {
         }
     }
 
-    private fun handleExport(result: ExportResult) {
-        when (result) {
-            is ExportResult.Success -> {
-                val started = markStartedAt.remove(result.id) ?: SystemClock.elapsedRealtime()
-                val latency = SystemClock.elapsedRealtime() - started
-                val path = File(File(filesDir, "spike"), result.clipRelativePath).absolutePath
-                metrics.logMarkLatency(
-                    markerId = result.id,
-                    latencyMs = latency,
-                    actualPreRollMs = result.actualPreRollMs,
-                    actualPostRollMs = result.actualPostRollMs,
-                    clipPath = path,
-                    durationMs = result.durationMs,
-                )
-                session.addClip(
-                    SpikeClipInfo(
-                        id = result.id,
-                        clipPath = path,
-                        durationMs = result.durationMs,
-                        actualPreRollMs = result.actualPreRollMs,
-                        actualPostRollMs = result.actualPostRollMs,
-                        latencyMs = latency,
-                    ),
-                )
-            }
-            is ExportResult.Failure -> {
-                markStartedAt.remove(result.id)
-                session.update { it.copy(exportingCount = (it.exportingCount - 1).coerceAtLeast(0)) }
-                session.setError("export ${result.id} failed: ${result.message}")
-            }
-        }
-    }
-
     private fun teardown(reason: String, stopProjection: Boolean = true) {
         SpikeLog.i("teardown reason=$reason")
-        overlay.dismiss()
         configCallback?.let { callbacks ->
             try {
                 applicationContext.unregisterComponentCallbacks(callbacks)
-            } catch (_: Exception) {
+            } catch (error: Exception) {
+                SpikeLog.w("callback cleanup failed", error)
             }
             configCallback = null
         }
@@ -391,7 +387,8 @@ class SpikeCaptureService : Service() {
         if (currentProjection != null) {
             try {
                 if (callback != null) currentProjection.unregisterCallback(callback)
-            } catch (_: Exception) {
+            } catch (error: Exception) {
+                SpikeLog.w("callback cleanup failed", error)
             }
             if (stopProjection) {
                 try {
