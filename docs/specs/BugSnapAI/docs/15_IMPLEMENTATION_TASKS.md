@@ -74,6 +74,7 @@ flowchart LR
 - **Test:** unit mạnh (mẫu giả, ngẫu nhiên hóa). **DoD+:** không phụ thuộc Android.
 
 ### T-012 CaptureEngine (VirtualDisplay + encoder)
+- **Trạng thái:** đã triển khai 2026-11-21; 120 unit test pass, build/lint 0 lỗi; emulator quay đủ 10 phút + xoay 20 lần, lưu clip, handle về 0 sau dừng. **Chờ nghiệm thu Ace 5** theo `AGENTS.md` B.19, chưa đánh dấu hoàn tất kiểm chứng thiết bị. Sau phản ánh video đen, đã xuất bản sửa tương thích encoder 0.1.3 (122 unit test, test pixel/chuyển động cuối clip và xoay 20 lần trên emulator pass; chờ xác nhận máy thật) ([chi tiết](../../../T012_BLACK_VIDEO_FIX.md)); số đo 10 phút bên trên thuộc bản T-012 ban đầu. [Chi tiết và giới hạn T-012](../../../T012_CAPTURE_ENGINE.md).
 - **Mục tiêu:** quay và đẩy mẫu vào buffer. **Tiên quyết:** T-011, T-003.
 - **Triển khai:** `ProjectionHolder`, `VirtualDisplayController`, `EncoderPipeline`, theo dõi xoay/resize, nhiệt, release trong `finally`.
 - **File:** `capture/engine/*`. **Acceptance:** chạy 10 phút không rò rỉ; xoay 20 lần ổn định.

@@ -18,14 +18,14 @@ Khi mở app, màn hình đầu là **BugSnap AI / Sẵn sàng quay thử**. C�
 ## 2. Logcat và chỉ số
 
 ```bash
-adb logcat -s BugSnapSpike:V
+adb logcat -s BugSnapSpike:V BugSnapCapture:V
 ```
 
-Tag duy nhất: `BugSnapSpike`. Các dòng hữu ích:
+Từ T-012, service/UI dùng `BugSnapSpike`, engine native dùng `BugSnapCapture`. Các dòng hữu ích:
 
 | Dòng log | Ý nghĩa |
 |---|---|
-| `encoder started gen=… WxH` | Encoder H.264 đã chạy |
+| `Encoder opened gen=… WxH fps=… codec=…` | Encoder H.264 đã chạy |
 | `keyframe ptsUs=… intervalMs=…` | V4 — khoảng I-frame thực tế |
 | `fps=…` | Số frame encode mỗi giây |
 | `heartbeat minute=… stillRunning=true thermal=… batteryPct=…` | V6 — service còn sống |
@@ -50,6 +50,7 @@ Ghi **build / model / phiên bản OxygenOS** ở đầu mỗi lần chạy. Ô 
 3. Bấm **V1: thử VirtualDisplay lần hai**.
 4. Đọc kết quả trên UI và log `reuseToken result=…`.
 - Kỳ vọng (cần xác minh): `SecurityException` trên Android 14+/16; không được tạo VirtualDisplay thứ hai từ cùng token.
+- Build T-012 không còn probe tạo display lần hai; nút chẩn đoán chỉ giải thích consent dùng một lần. Muốn nghiệm thu V1 cần dùng spike probe cũ hoặc harness dành riêng, không coi thông báo của T-012 là kết quả kiểm chứng API.
 - Kết quả: _chưa chạy_
 - Ngày / build / OS:
 

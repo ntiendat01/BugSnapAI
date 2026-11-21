@@ -26,36 +26,9 @@ class CaptureFlowTest {
     @Test fun capturesAndSavesRealVideo() {
         val instrumentation = InstrumentationRegistry.getInstrumentation()
         val automation = instrumentation.uiAutomation
-        automation.executeShellCommand("pm grant com.bugsnap.ai android.permission.POST_NOTIFICATIONS").use {
-            android.os.ParcelFileDescriptor.AutoCloseInputStream(it).use { stream -> stream.readBytes() }
-        }
+        CaptureTestControls.grantNotifications()
         compose.onNodeWithText("Bắt đầu quay").performClick()
-        compose.waitUntil(15_000) { automation.rootInActiveWindow?.packageName == "com.android.systemui" }
-        var root = automation.rootInActiveWindow
-        val text = mutableListOf<String>()
-        fun visit(node: AccessibilityNodeInfo?) {
-            if (node == null) return
-            node.text?.let { text.add(it.toString()) }
-            for (index in 0 until node.childCount) visit(node.getChild(index))
-        }
-        visit(root)
-        android.util.Log.i("CaptureFlowTest", text.joinToString(" | "))
-        fun clickText(label: String): Boolean {
-            root = automation.rootInActiveWindow
-            var node = root?.findAccessibilityNodeInfosByText(label)?.firstOrNull() ?: return false
-            while (!node.isClickable && node.parent != null) node = node.parent
-            return node.performAction(AccessibilityNodeInfo.ACTION_CLICK)
-        }
-        // Android's consent sheet may initially offer a single app. Select the whole screen for this smoke test.
-        if (clickText("Share one app") || clickText("A single app") || clickText("A single application")) {
-            compose.waitUntil(5_000) { automation.rootInActiveWindow?.findAccessibilityNodeInfosByText("entire screen")?.isNotEmpty() == true || automation.rootInActiveWindow?.findAccessibilityNodeInfosByText("Entire screen")?.isNotEmpty() == true }
-            clickText("Share entire screen") || clickText("Entire screen")
-        }
-        text.clear()
-        visit(automation.rootInActiveWindow)
-        android.util.Log.i("CaptureFlowTest", "After screen choice: " + text.joinToString(" | "))
-        val consent = clickText("Start recording") || clickText("Start now") || clickText("Start sharing") || clickText("Share screen") || clickText("Start")
-        assertTrue("Consent button not found: $text", consent)
+        CaptureTestControls.acceptConsent()
         compose.waitUntil(30_000) { compose.onAllNodesWithText("Đang quay").fetchSemanticsNodes().isNotEmpty() }
         compose.onNodeWithText("Mark Bug").performClick()
         compose.waitUntil(10_000) {

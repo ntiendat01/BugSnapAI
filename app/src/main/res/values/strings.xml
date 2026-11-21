@@ -32,7 +32,7 @@
     <string name="spike_notification_text">Mark Bug hoặc Dừng từ đây.</string>
     <string name="spike_test_notification_title">Thông báo thử V7</string>
     <string name="spike_overlay_label">BS</string>
-    <string name="spike_thermal_severe">Nhiệt độ máy cao (SEVERE). Nên Pause.</string>
+    <string name="spike_thermal_severe">Máy đang nóng. Nên dừng quay để máy hạ nhiệt.</string>
     <string name="capture_ready">Sẵn sàng quay thử</string>
     <string name="capture_started">Đã bắt đầu quay</string>
     <string name="capture_intro">Giữ tối đa 30 giây gần nhất. Bấm Mark Bug khi gặp lỗi để lưu clip.</string>
@@ -92,4 +92,7 @@
     <string name="video_gallery_failed">Chưa lưu được video vào DCIM/BugSnap. Bản ghi tạm vẫn còn trong BugSnap. Kiểm tra dung lượng rồi thử lại.</string>
     <string name="video_cleanup_failed">Chưa dọn được video đang lưu dở trong DCIM/BugSnap. Hãy mở lại app để thử lại.</string>
     <string name="video_cache_cleanup_failed">Video đã lưu trong DCIM/BugSnap. Chưa dọn được bản ghi tạm trong app.</string>
+    <string name="capture_engine_failed">Không tiếp tục quay được. Clip đang chờ đã được kết thúc với phần đã ghi. Hãy bắt đầu quay lại để cấp quyền mới.</string>
+    <string name="capture_consent_missing">Chưa nhận được quyền quay màn hình. Hãy bắt đầu quay lại.</string>
+    <string name="capture_single_use_consent">CaptureEngine chỉ dùng quyền quay một lần. Dừng quay rồi bắt đầu lại để cấp quyền mới.</string>
 </resources>

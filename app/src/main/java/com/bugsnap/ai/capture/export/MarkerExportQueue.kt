@@ -45,11 +45,11 @@ class MarkerExportQueue(
 
     fun pendingAndInFlight(): Int = lock.withLock { waiting.size + inFlight.get() }
 
-    fun shutdown() {
+    fun shutdown(waitForTermination: Boolean = true) {
         shutdown = true
         if (ownExecutor) {
             executorService.shutdown()
-            executorService.awaitTermination(5, TimeUnit.SECONDS)
+            if (waitForTermination) executorService.awaitTermination(5, TimeUnit.SECONDS)
         }
     }
 

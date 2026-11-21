@@ -6,7 +6,7 @@ Nhánh `dev` có nền tảng T-001–T-004 và spike T-010. Bản **0.1.2-t010*
 
 T-014 bổ sung [EvidenceStore](docs/T014_EVIDENCE_STORE.md) cho kiến trúc phiên, gồm đường dẫn tương đối, ghi atomic, xóa phiên, dọn `.part` và kiểm dung lượng. Việc nối store vào pipeline quay thuộc T-015/T-016; video mới của spike được công bố vào `DCIM/BugSnap` theo [thay đổi lưu video](docs/DCIM_VIDEO_STORAGE.md).
 
-T-011 hoàn thiện [rolling buffer](docs/T011_ROLLING_BUFFER.md) thuần JVM: sample/snapshot bất biến, giới hạn thời gian, generation và kiểm thử nhiều marker/đa luồng. Bước triển khai tiếp theo là T-012 CaptureEngine trước khi nối T-015/T-016.
+T-011 hoàn thiện [rolling buffer](docs/T011_ROLLING_BUFFER.md) thuần JVM: sample/snapshot bất biến, giới hạn thời gian, generation và kiểm thử nhiều marker/đa luồng. T-012 bổ sung [CaptureEngine](docs/T012_CAPTURE_ENGINE.md). Bản `0.1.3-t012-fix` điều chỉnh tương thích encoder sau phản ánh video đen, xem [bản sửa và kiểm thử hình ảnh](docs/T012_BLACK_VIDEO_FIX.md). Nghiệm thu trên Ace 5 vẫn còn mở.
 
 ## Yêu cầu môi trường
 

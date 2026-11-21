@@ -48,6 +48,7 @@ sequenceDiagram
 ## 4. Xoay màn hình / đổi độ phân giải
 - Đăng ký theo dõi cấu hình; khi kích thước/hướng đổi: tạo **encoder generation mới** với kích thước mới, `VirtualDisplay.setSurface()` sang Surface mới, `resize()` nếu cần.
 - Một file MP4 không đổi kích thước giữa chừng ⇒ **clip chỉ gồm mẫu của generation hiện tại** ở thời điểm Mark Bug. Hệ quả: nếu xoay máy trong 30 s trước bug, clip ngắn hơn. Ghi rõ trong UI ("Clip bắt đầu từ lần xoay màn hình gần nhất").
+- T-012: detach Surface trước khi đóng encoder cũ; không tạo thêm VirtualDisplay. Đổi profile kết thúc pending bằng dữ liệu đã ghi và chờ keyframe generation mới trước khi cho Mark. Chặn cả callback generation cũ đang đến trong lúc resize, không chỉ callback sau khi encoder cũ đã đóng.
 - Phương án thay thế (V2, nếu cần): giữ canvas cố định và letterbox qua GL — phức tạp, không làm ở MVP.
 
 ## 5. Ảnh chụp khi Mark Bug
@@ -66,6 +67,14 @@ sequenceDiagram
 - Giảm tải tự động: nếu `PowerManager.currentThermalStatus ≥ MODERATE` ⇒ hạ xuống 24 fps/3 Mbps; ≥ SEVERE ⇒ thông báo và đề nghị Pause.
 - Kiểm soát RAM: xem `07`. Kiểm soát dung lượng: chỉ ghi đĩa khi Mark Bug.
 - Khi pin < 15% và không sạc: cảnh báo, gợi ý giảm buffer.
+
+### 7.1. Cấu trúc T-012
+- `capture/engine/CaptureEngine`: state/command, ring buffer, khóa điều khiển, generation và thermal policy. Backend port cho unit test; không chạm DB/file/UI.
+- `AndroidCaptureBackend`, `ProjectionHolder`, `VirtualDisplayController`, `EncoderPipeline`: một worker looper cho thao tác codec/display, polling output và release. Callback projection được đăng ký trước createVirtualDisplay. FGS vẫn do Service bật trước khi gọi engine. Bản 0.1.3 đổi async codec sang polling và Baseline theo [báo cáo video đen](../../../T012_BLACK_VIDEO_FIX.md).
+- `CaptureEngineFactory` qua Hilt tạo engine mới mỗi consent. Parent scope bị hủy vẫn lên lịch cleanup trên worker trước khi quit; close/pause/resize lỗi vẫn giải phóng các handle khác. Lỗi cleanup được giữ riêng trong state và log.
+- `CaptureResourceTracker` đếm handle đang sở hữu, peak và lỗi release; kết hợp kiểm tra MP4 và đo PSS/native heap. Số handle về 0 không tự chứng minh driver OEM không rò bộ nhớ.
+- API pause/resume giữ cùng projection/display, tạo encoder generation mới. UI pause sản phẩm thuộc các task coordinator/service sau; T-012 không tự phục hồi projection đã mất.
+- Đồng bộ worker và thermal policy đã được cài đặt; trạng thái kiểm thử/những phần chưa nghiệm thu ghi tại [T012_CAPTURE_ENGINE.md](../../../T012_CAPTURE_ENGINE.md).
 
 ## 8. Giới hạn đã biết
 - `FLAG_SECURE`: vùng đó đen trong clip. **Không bao giờ** tìm cách vượt qua.

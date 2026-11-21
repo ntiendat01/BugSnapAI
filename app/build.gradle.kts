@@ -13,8 +13,8 @@ android {
         applicationId = "com.bugsnap.ai"
         minSdk = 29
         targetSdk = 36
-        versionCode = 3
-        versionName = "0.1.2-t010"
+        versionCode = 4
+        versionName = "0.1.3-t012-fix"
         testInstrumentationRunner = "androidx.test.runner.AndroidJUnitRunner"
     }
 
